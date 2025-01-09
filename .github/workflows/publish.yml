@@ -15,7 +15,7 @@ jobs:
   publish:
       defaults:
          run:
-            working-directory: ./wast
+            working-directory: wast
       name: Publish inf-wast
       runs-on: ubuntu-latest
       needs: build
