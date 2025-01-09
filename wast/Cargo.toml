@@ -6,7 +6,7 @@ repository = { workspace = true }
 edition = { workspace = true }
 
 authors = ["Alex Crichton <alex@alexcrichton.com>", "Georgii Plotnikov <accembler@gmail.com>"]
-license = "Apache-2.0_WITH_LLVM-exception"
+license-file = "Apache-2.0_WITH_LLVM-exception"
 readme = "README.md"
 description = """
 wasm-tool wast crate fork with Inference non-detenministic instructions extension
