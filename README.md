@@ -1,5 +1,5 @@
 <div align="center">
-  <h1><code>Inference wasm-tools</code></h1>
+  <h1><code>Inferara wasm-tools</code></h1>
 
 <strong><a href="https://inferara.com/">Inferara</a> project</strong>
 
