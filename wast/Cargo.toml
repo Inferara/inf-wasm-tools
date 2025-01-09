@@ -1,0 +1,52 @@
+[package]
+name = "inf-wast"
+version = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+edition = { workspace = true }
+
+authors = ["Alex Crichton <alex@alexcrichton.com>", "Georgii Plotnikov <accembler@gmail.com>"]
+license = "Apache-2.0_WITH_LLVM-exception"
+readme = "README.md"
+description = """
+wasm-tool wast crate fork with Inference non-detenministic instructions extension
+"""
+
+[dependencies]
+leb128 = "0.2.5"
+unicode-width = "0.2.0"
+memchr = "2.4.1"
+wasm-encoder = "0.223.0"
+bumpalo = "3.14.0"
+gimli = { version = "0.31.1", optional = true }
+
+[dev-dependencies]
+anyhow = "1.0.40"
+libtest-mimic = "0.8.1"
+wasmparser = "0.223.0"
+wat = "1.222.0"
+rand = { version = "0.8.4", features = ["small_rng"] }
+
+[features]
+default = ['wasm-module', 'component-model']
+
+# Includes default parsing support for `*.wat` and `*.wast` files (wasm
+# modules). This isn't always needed though if you're parsing just an
+# s-expression based format. If you'd like to slim down this dependency to just
+# the lexer, parser framework, and token support, this feature can be disabled.
+#
+# This feature is turned on by default.
+wasm-module = []
+
+# Off-by-default feature to support emitting DWARF debugging information in
+# parsed binaries pointing back to source locations in the original `*.wat`
+# source.
+dwarf = ["dep:gimli"]
+
+# On-by-default this builds in support for parsing the text format of
+# components.
+component-model = ['wasm-module', 'wasm-encoder/component-model']
+
+[[test]]
+name = "parse-fail"
+harness = false
