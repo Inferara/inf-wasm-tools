@@ -242,6 +242,12 @@ impl<'a> ExpressionParser<'a> {
                                 .push(Level::EndWith(Instruction::End(None), None));
                         }
 
+                        i @ Instruction::I32Uzumaki | i @ Instruction::I64Uzumaki => {
+                            self.push_instr(i, span);
+                            self.stack
+                                .push(Level::EndWith(Instruction::End(None), None));
+                        }
+
                         // Parsing an `if` instruction is super tricky, so we
                         // push an `If` scope and we let all our scope-based
                         // parsing handle the remaining items.
@@ -640,6 +646,9 @@ instructions! {
         I64Const(i64) : [0x42] : "i64.const",
         F32Const(F32) : [0x43] : "f32.const",
         F64Const(F64) : [0x44] : "f64.const",
+
+        I32Uzumaki :  [0xfc, 0x1A] : "i32.uzumaki",
+        I64Uzumaki :  [0xfc, 0x1B] : "i64.uzumaki",
 
         I32Clz : [0x67] : "i32.clz",
         I32Ctz : [0x68] : "i32.ctz",

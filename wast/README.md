@@ -29,9 +29,12 @@ More information about Inference can be found in the official [Inference languag
 | **Assume** | `(assume )` | `0xFC 0x0C` | TBD |
 | **Unique** | `(unique )` | `0xFC 0x0D` | TBD |
 
-### Stack instructions
+### Variable instructions
 
-WIP
+| Instruction | WAT syntax | Binary representation | Description |
+| --- | --- | --- | --- |
+| **i32.uzumaki** | `(i32.uzumaki)` | `0xFC 0x1A` | TBD |
+| **i64.uzumaki** | `(i64.uzumaki)` | `0xFC 0x1B` | TBD |
 
 ## Origin
 
