@@ -519,10 +519,10 @@ instructions! {
         Loop(Box<BlockType<'a>>) : [0x03] : "loop",
         End(Option<Id<'a>>) : [0x0b] : "end",
 
-        Forall(Box<BlockType<'a>>) : [0xfc, 0x0A] : "forall",
-        Exists(Box<BlockType<'a>>) : [0xfc, 0x0B] : "exists",
-        Assume(Box<BlockType<'a>>) : [0xfc, 0x0C] : "assume",
-        Unique(Box<BlockType<'a>>) : [0xfc, 0x0D] : "unique",
+        Forall(Box<BlockType<'a>>) : [0xfc, 0xAA] : "forall",
+        Exists(Box<BlockType<'a>>) : [0xfc, 0xAB] : "exists",
+        Assume(Box<BlockType<'a>>) : [0xfc, 0xAC] : "assume",
+        Unique(Box<BlockType<'a>>) : [0xfc, 0xAD] : "unique",
 
         Unreachable : [0x00] : "unreachable",
         Nop : [0x01] : "nop",

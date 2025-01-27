@@ -24,10 +24,10 @@ More information about Inference can be found in the official [Inference languag
 
 | Instruction | WAT syntax | Binary representation | Description |
 | --- | --- | --- | --- |
-| **Forall** | `(forall )` | `0xFC 0x0A` | TBD |
-| **Exists** | `(exists )` | `0xFC 0x0B` | TBD |
-| **Assume** | `(assume )` | `0xFC 0x0C` | TBD |
-| **Unique** | `(unique )` | `0xFC 0x0D` | TBD |
+| **Forall** | `(forall )` | `0xFC 0xAA` | TBD |
+| **Exists** | `(exists )` | `0xFC 0xAB` | TBD |
+| **Assume** | `(assume )` | `0xFC 0xAC` | TBD |
+| **Unique** | `(unique )` | `0xFC 0xAD` | TBD |
 
 ### Variable instructions
 
