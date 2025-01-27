@@ -4,7 +4,7 @@
 <strong><a href="https://inferara.com/">Inferara</a> project</strong>
 
   <p>
-    <strong>A Rust tools for working with WebAssembly and its extension with Inference non-deterministic instructions</strong>
+    <strong>A Rust toolset for working with WebAssembly and its extension with Inference non-deterministic instructions</strong>
   </p>
 
 </div>
@@ -20,7 +20,7 @@ This project is licensed under the MIT license.
 
 ## Exceptions
 
-- [inf-wast](./wast/) is a fork of [wast](https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wast) from [wasm-tools](https://github.com/bytecodealliance/wasm-tools/tree/main) which is under the Apache 2.0 license with the LLVM exception, so it inherits the same license.
+- [inf-wast](./inf-wast/) is a fork of [wast](https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wast) from [wasm-tools](https://github.com/bytecodealliance/wasm-tools/tree/main) which is under the Apache 2.0 license with the LLVM exception, so it inherits the same license.
 
 ### Contributions
 
