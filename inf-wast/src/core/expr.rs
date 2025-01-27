@@ -519,10 +519,10 @@ instructions! {
         Loop(Box<BlockType<'a>>) : [0x03] : "loop",
         End(Option<Id<'a>>) : [0x0b] : "end",
 
-        Forall(Box<BlockType<'a>>) : [0xfc, 0xAA] : "forall",
-        Exists(Box<BlockType<'a>>) : [0xfc, 0xAB] : "exists",
-        Assume(Box<BlockType<'a>>) : [0xfc, 0xAC] : "assume",
-        Unique(Box<BlockType<'a>>) : [0xfc, 0xAD] : "unique",
+        Forall(Box<BlockType<'a>>) : [0xfc, 0x3a] : "forall",
+        Exists(Box<BlockType<'a>>) : [0xfc, 0x3b] : "exists",
+        Assume(Box<BlockType<'a>>) : [0xfc, 0x3c] : "assume",
+        Unique(Box<BlockType<'a>>) : [0xfc, 0x3d] : "unique",
 
         Unreachable : [0x00] : "unreachable",
         Nop : [0x01] : "nop",
@@ -647,8 +647,8 @@ instructions! {
         F32Const(F32) : [0x43] : "f32.const",
         F64Const(F64) : [0x44] : "f64.const",
 
-        I32Uzumaki :  [0xfc, 0x1A] : "i32.uzumaki",
-        I64Uzumaki :  [0xfc, 0x1B] : "i64.uzumaki",
+        I32Uzumaki :  [0xfc, 0x31] : "i32.uzumaki",
+        I64Uzumaki :  [0xfc, 0x32] : "i64.uzumaki",
 
         I32Clz : [0x67] : "i32.clz",
         I32Ctz : [0x68] : "i32.ctz",

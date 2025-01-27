@@ -24,17 +24,17 @@ More information about Inference can be found in the official [Inference languag
 
 | Instruction | WAT syntax | Binary representation | Description |
 | --- | --- | --- | --- |
-| **Forall** | `(forall )` | `0xFC 0xAA` | TBD |
-| **Exists** | `(exists )` | `0xFC 0xAB` | TBD |
-| **Assume** | `(assume )` | `0xFC 0xAC` | TBD |
-| **Unique** | `(unique )` | `0xFC 0xAD` | TBD |
+| **Forall** | `(forall )` | `0xFC 0x3a` | TBD |
+| **Exists** | `(exists )` | `0xFC 0x3b` | TBD |
+| **Assume** | `(assume )` | `0xFC 0x3c` | TBD |
+| **Unique** | `(unique )` | `0xFC 0x3d` | TBD |
 
 ### Variable instructions
 
 | Instruction | WAT syntax | Binary representation | Description |
 | --- | --- | --- | --- |
-| **i32.uzumaki** | `(i32.uzumaki)` | `0xFC 0x1A` | TBD |
-| **i64.uzumaki** | `(i64.uzumaki)` | `0xFC 0x1B` | TBD |
+| **i32.uzumaki** | `(i32.uzumaki)` | `0xFC 0x31` | TBD |
+| **i64.uzumaki** | `(i64.uzumaki)` | `0xFC 0x32` | TBD |
 
 ## Origin
 
