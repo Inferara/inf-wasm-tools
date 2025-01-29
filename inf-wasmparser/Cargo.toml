@@ -14,7 +14,8 @@ A simple event-driven library for parsing WebAssembly binary files.
 """
 exclude = ["benches/*.wasm"]
 
-[lints.clippy]
+[lints]
+workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

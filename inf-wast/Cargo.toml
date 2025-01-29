@@ -13,17 +13,8 @@ description = """
 inf-wasm-tool inf-wast crate fork with Inference non-detenministic instructions extension
 """
 
-# This is inherited from the origin. Shutting down all clippy warnings would require
-# many chages in the codebase.
-[lints.clippy]
-# The default set of lints in Clippy is viewed as "too noisy" right now so
-# they're all turned off by default. Selective lints are then enabled below as
-# necessary.
-all = { level = 'allow', priority = -1 }
-clone_on_copy = 'warn'
-map_clone = 'warn'
-unnecessary_to_owned = 'warn'
-manual_strip = 'warn'
+[lints]
+workspace = true
 
 [dependencies]
 leb128.workspace = true
