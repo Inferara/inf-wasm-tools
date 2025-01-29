@@ -393,7 +393,7 @@ impl Validator {
     ///
     /// ```
     /// fn foo() -> anyhow::Result<()> {
-    /// use wasmparser::Validator;
+    /// use inf_wasmparser::Validator;
     ///
     /// let mut validator = Validator::default();
     ///

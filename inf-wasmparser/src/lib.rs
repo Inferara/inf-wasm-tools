@@ -59,7 +59,7 @@ mod prelude {
 ///
 /// This is a little complicated, so first off sorry about that. The idea here
 /// though is that there's one source of truth for the listing of instructions
-/// in `wasmparser` and this is the one location. All other locations should be
+/// in `inf_wasmparser` and this is the one location. All other locations should be
 /// derivative from this. As this one source of truth it has all instructions
 /// from all proposals all grouped together. Down below though, for compile
 /// time, currently the simd instructions are split out into their own macro.
@@ -998,7 +998,7 @@ _for_each_operator_group!(define_for_each_simd_operator);
 /// https://github.com/WebAssembly/wide-arithmetic
 ///
 /// ```
-/// fn do_nothing(op: &wasmparser::Operator) {
+/// fn do_nothing(op: &inf_wasmparser::Operator) {
 ///     macro_rules! define_match_operator {
 ///         // The outer layer of repetition represents how all operators are
 ///         // provided to the macro at the same time.
@@ -1021,7 +1021,7 @@ _for_each_operator_group!(define_for_each_simd_operator);
 ///         ($( @$proposal:ident $op:ident $({ $($arg:ident: $argty:ty),* })? => $visit:ident ($($ann:tt)*))*) => {
 ///             match op {
 ///                 $(
-///                     wasmparser::Operator::$op $( { $($arg),* } )? => {
+///                     inf_wasmparser::Operator::$op $( { $($arg),* } )? => {
 ///                         // do nothing for this example
 ///                     }
 ///                 )*
@@ -1029,7 +1029,7 @@ _for_each_operator_group!(define_for_each_simd_operator);
 ///             }
 ///         }
 ///     }
-///     wasmparser::for_each_operator!(define_match_operator);
+///     inf_wasmparser::for_each_operator!(define_match_operator);
 /// }
 /// ```
 ///
@@ -1037,14 +1037,14 @@ _for_each_operator_group!(define_for_each_simd_operator);
 /// example, you could do:
 ///
 /// ```
-/// fn is_mvp_operator(op: &wasmparser::Operator) -> bool {
+/// fn is_mvp_operator(op: &inf_wasmparser::Operator) -> bool {
 ///     macro_rules! define_match_operator {
 ///         // delegate the macro invocation to sub-invocations of this macro to
 ///         // deal with each instruction on a case-by-case basis.
 ///         ($( @$proposal:ident $op:ident $({ $($arg:ident: $argty:ty),* })? => $visit:ident ($($ann:tt)*))*) => {
 ///             match op {
 ///                 $(
-///                     wasmparser::Operator::$op $( { $($arg),* } )? => {
+///                     inf_wasmparser::Operator::$op $( { $($arg),* } )? => {
 ///                         define_match_operator!(impl_one @$proposal)
 ///                     }
 ///                 )*
@@ -1055,7 +1055,7 @@ _for_each_operator_group!(define_for_each_simd_operator);
 ///         (impl_one @mvp) => { true };
 ///         (impl_one @$proposal:ident) => { false };
 ///     }
-///     wasmparser::for_each_operator!(define_match_operator)
+///     inf_wasmparser::for_each_operator!(define_match_operator)
 /// }
 /// ```
 #[doc(inline)]
@@ -1160,10 +1160,10 @@ pub use _for_each_operator_impl as for_each_operator;
 ///
 /// pub struct VisitAndDoNothing;
 ///
-/// impl<'a> wasmparser::VisitOperator<'a> for VisitAndDoNothing {
+/// impl<'a> inf_wasmparser::VisitOperator<'a> for VisitAndDoNothing {
 ///     type Output = ();
 ///
-///     wasmparser::for_each_visit_operator!(define_visit_operator);
+///     inf_wasmparser::for_each_visit_operator!(define_visit_operator);
 /// }
 /// ```
 ///
@@ -1210,11 +1210,11 @@ pub use _for_each_operator_impl as for_each_operator;
 ///
 /// pub struct VisitOnlyMvp;
 ///
-/// impl<'a> wasmparser::VisitOperator<'a> for VisitOnlyMvp {
+/// impl<'a> inf_wasmparser::VisitOperator<'a> for VisitOnlyMvp {
 ///     type Output = bool;
 ///
-///     wasmparser::for_each_visit_operator!(visit_only_mvp);
-/// #   wasmparser::for_each_visit_operator!(visit_mvp);
+///     inf_wasmparser::for_each_visit_operator!(visit_only_mvp);
+/// #   inf_wasmparser::for_each_visit_operator!(visit_mvp);
 ///
 ///     // manually define `visit_*` for all MVP operators here
 /// }
@@ -1248,11 +1248,11 @@ pub use _for_each_visit_operator_impl as for_each_visit_operator;
 /// # }
 /// pub struct VisitAndDoNothing;
 ///
-/// impl<'a> wasmparser::VisitOperator<'a> for VisitAndDoNothing {
+/// impl<'a> inf_wasmparser::VisitOperator<'a> for VisitAndDoNothing {
 ///     type Output = ();
 ///
 ///     // implement all the visit methods ..
-///     # wasmparser::for_each_visit_operator!(define_visit_operator);
+///     # inf_wasmparser::for_each_visit_operator!(define_visit_operator);
 /// }
 ///
 /// macro_rules! define_visit_simd_operator {
@@ -1272,8 +1272,8 @@ pub use _for_each_visit_operator_impl as for_each_visit_operator;
 ///     }
 /// }
 ///
-/// impl<'a> wasmparser::VisitSimdOperator<'a> for VisitAndDoNothing {
-///     wasmparser::for_each_visit_simd_operator!(define_visit_simd_operator);
+/// impl<'a> inf_wasmparser::VisitSimdOperator<'a> for VisitAndDoNothing {
+///     inf_wasmparser::for_each_visit_simd_operator!(define_visit_simd_operator);
 /// }
 /// ```
 #[cfg(feature = "simd")]

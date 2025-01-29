@@ -321,7 +321,7 @@ impl<'a> IntoIterator for OperatorsReader<'a> {
     ///
     /// # Examples
     /// ```
-    /// # use wasmparser::{Operator, CodeSectionReader, Result, BinaryReader};
+    /// # use inf_wasmparser::{Operator, CodeSectionReader, Result, BinaryReader};
     /// # let data: &[u8] = &[
     /// #     0x01, 0x03, 0x00, 0x01, 0x0b];
     /// let reader = BinaryReader::new(data, 0);
@@ -377,7 +377,7 @@ impl<'a> Iterator for OperatorsIteratorWithOffsets<'a> {
     ///
     /// # Examples
     /// ```
-    /// use wasmparser::{Operator, CodeSectionReader, Result, BinaryReader};
+    /// use inf_wasmparser::{Operator, CodeSectionReader, Result, BinaryReader};
     /// # let data: &[u8] = &[
     /// #     0x01, 0x03, 0x00, /* offset = 23 */ 0x01, 0x0b];
     /// let reader = BinaryReader::new(data, 20);
@@ -454,7 +454,7 @@ pub trait VisitOperator<'a> {
     /// #         $( fn $visit(&mut self $($(,$arg: $argty)*)?) {} )*
     /// #     }
     /// # }
-    /// # use wasmparser::{VisitOperator, VisitSimdOperator};
+    /// # use inf_wasmparser::{VisitOperator, VisitSimdOperator};
     /// pub struct MyVisitor;
     ///
     /// impl<'a> VisitOperator<'a> for MyVisitor {
@@ -465,12 +465,12 @@ pub trait VisitOperator<'a> {
     ///     }
     ///
     ///     // implement remaining visitation methods here ...
-    ///     # wasmparser::for_each_visit_operator!(define_visit_operator);
+    ///     # inf_wasmparser::for_each_visit_operator!(define_visit_operator);
     /// }
     ///
     /// impl VisitSimdOperator<'_> for MyVisitor {
     ///     // implement SIMD visitation methods here ...
-    ///     # wasmparser::for_each_visit_simd_operator!(define_visit_operator);
+    ///     # inf_wasmparser::for_each_visit_simd_operator!(define_visit_operator);
     /// }
     /// ```
     #[cfg(feature = "simd")]

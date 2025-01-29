@@ -1,6 +1,6 @@
 use anyhow::Result;
+use inf_wasmparser::{Parser, Payload};
 use std::env;
-use wasmparser::{Parser, Payload};
 
 fn main() -> Result<()> {
     let args = env::args().collect::<Vec<_>>();

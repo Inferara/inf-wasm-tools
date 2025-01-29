@@ -28,7 +28,7 @@ fn big_type_indices() {
 
     let wasm = module.finish();
 
-    wasmparser::Validator::default()
+    inf_wasmparser::Validator::default()
         .validate_all(&wasm)
         .unwrap();
 }

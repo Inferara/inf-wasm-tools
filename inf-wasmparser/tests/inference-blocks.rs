@@ -28,7 +28,7 @@ mod tests {
             0xb, // end block
             0x0, 0xd, 0x4, 0x6e, 0x61, 0x6d, 0x65, 0x2, 0x6, 0x1, 0x0, 0x1, 0x2, 0x1, 0x63,
         ];
-        let mut validator = wasmparser::Validator::default();
+        let mut validator = inf_wasmparser::Validator::default();
         validator.validate_all(&wasm).unwrap();
     }
 
@@ -59,7 +59,7 @@ mod tests {
             0xb, // end block
             0x0, 0xd, 0x4, 0x6e, 0x61, 0x6d, 0x65, 0x2, 0x6, 0x1, 0x0, 0x1, 0x2, 0x1, 0x63,
         ];
-        let mut validator = wasmparser::Validator::default();
+        let mut validator = inf_wasmparser::Validator::default();
         validator.validate_all(&wasm).unwrap();
     }
 
@@ -90,7 +90,7 @@ mod tests {
             0xb, // end block
             0x0, 0xd, 0x4, 0x6e, 0x61, 0x6d, 0x65, 0x2, 0x6, 0x1, 0x0, 0x1, 0x2, 0x1, 0x63,
         ];
-        let mut validator = wasmparser::Validator::default();
+        let mut validator = inf_wasmparser::Validator::default();
         validator.validate_all(&wasm).unwrap();
     }
 }

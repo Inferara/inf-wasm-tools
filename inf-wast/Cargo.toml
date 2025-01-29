@@ -27,7 +27,7 @@ manual_strip = 'warn'
 
 [dependencies]
 leb128.workspace = true
-wasm-encoder = "0.224.0"
+wasm-encoder = "0.223.0"
 unicode-width = "0.2.0"
 memchr = "2.4.1"
 bumpalo = "3.14.0"

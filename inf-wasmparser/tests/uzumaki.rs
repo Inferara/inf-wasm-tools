@@ -18,7 +18,7 @@ mod tests {
             0x20, 0x0, // local.get $c
             0xb, 0x0, 0xd, 0x4, 0x6e, 0x61, 0x6d, 0x65, 0x2, 0x6, 0x1, 0x0, 0x1, 0x0, 0x1, 0x63,
         ];
-        let mut validator = wasmparser::Validator::default();
+        let mut validator = inf_wasmparser::Validator::default();
         validator.validate_all(&wasm).unwrap();
     }
 
@@ -40,11 +40,7 @@ mod tests {
             0x20, 0x0, // local.get $c
             0xb, 0x0, 0xd, 0x4, 0x6e, 0x61, 0x6d, 0x65, 0x2, 0x6, 0x1, 0x0, 0x1, 0x0, 0x1, 0x63,
         ];
-        let mut validator = wasmparser::Validator::default();
+        let mut validator = inf_wasmparser::Validator::default();
         validator.validate_all(&wasm).unwrap();
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-// }

@@ -852,7 +852,7 @@ impl<'a> BinaryReader<'a> {
     /// Store an offset for use in diagnostics or any other purposes:
     ///
     /// ```
-    /// # use wasmparser::{BinaryReader, VisitOperator, Result, for_each_visit_operator};
+    /// # use inf_wasmparser::{BinaryReader, VisitOperator, Result, for_each_visit_operator};
     ///
     /// pub fn dump(mut reader: BinaryReader) -> Result<()> {
     ///     let mut visitor = Dumper { offset: 0 };
@@ -1717,7 +1717,7 @@ impl<'a> BrTable<'a> {
     /// # Examples
     ///
     /// ```rust
-    /// use wasmparser::{BinaryReader, Operator};
+    /// use inf_wasmparser::{BinaryReader, Operator};
     ///
     /// let buf = [0x0e, 0x02, 0x01, 0x02, 0x00];
     /// let mut reader = BinaryReader::new(&buf, 0);
