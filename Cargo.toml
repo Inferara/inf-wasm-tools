@@ -3,7 +3,8 @@
 resolver = "2"
 
 members = [
-    "inf-wast"
+    "inf-wast",
+    "inf-wasmparser",
 ]
 
 [workspace.package]
@@ -15,3 +16,6 @@ repository = "https://github.com/Inferara/inf-wasm-tools"
 
 [workspace.dependencies]
 inf-wast = { path = "inf-wast" }
+inf-wasmparser = { path = "inf-wasmparser" }
+anyhow = "1.0.40"
+leb128 = "0.2.5"
