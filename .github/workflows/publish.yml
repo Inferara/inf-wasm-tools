@@ -15,3 +15,5 @@ jobs:
       run: cargo test --verbose
     - name: Publish inf-wast
       run: cargo publish -p inf-wast
+    - name: Publish inf-wasmparser
+      run: cargo publish -p inf-wasmparser

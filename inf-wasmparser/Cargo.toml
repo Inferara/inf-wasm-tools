@@ -7,10 +7,10 @@ edition = { workspace = true }
 keywords = ["parser", "WebAssembly", "wasm"]
 
 authors = ["Yury Delendik <ydelendik@mozilla.com>", "Georgii Plotnikov <accembler@gmail.com>"]
-license-file = "LICENSE-Apache-2.0_WITH_LLVM-exception"
+license-file = "../LICENSE-Apache-2.0_WITH_LLVM-exception"
 readme = "README.md"
 description = """
-A simple event-driven library for parsing WebAssembly binary files.
+A simple event-driven library for parsing Inferara non-deterministic WASM extension WebAssembly binary files.
 """
 exclude = ["benches/*.wasm"]
 
