@@ -4,40 +4,32 @@ version = { workspace = true }
 homepage = { workspace = true }
 repository = { workspace = true }
 edition = { workspace = true }
+keywords = ["parser", "WebAssembly", "wat"]
 
 authors = ["Alex Crichton <alex@alexcrichton.com>", "Georgii Plotnikov <accembler@gmail.com>"]
-license-file = "LICENSE-Apache-2.0_WITH_LLVM-exception"
+license-file = "../LICENSE-Apache-2.0_WITH_LLVM-exception"
 readme = "README.md"
 description = """
-wasm-tool wast crate fork with Inference non-detenministic instructions extension
+inf-wasm-tool inf-wast crate fork with Inference non-detenministic instructions extension
 """
 
-# This is inherited from the origin. Shutting down all clippy warnings would require
-# many chages in the codebase.
-[lints.clippy]
-# The default set of lints in Clippy is viewed as "too noisy" right now so
-# they're all turned off by default. Selective lints are then enabled below as
-# necessary.
-all = { level = 'allow', priority = -1 }
-clone_on_copy = 'warn'
-map_clone = 'warn'
-unnecessary_to_owned = 'warn'
-manual_strip = 'warn'
+[lints]
+workspace = true
 
 [dependencies]
-leb128 = "0.2.5"
+leb128.workspace = true
+wasm-encoder = "0.223.0"
 unicode-width = "0.2.0"
 memchr = "2.4.1"
-wasm-encoder = "0.223.0"
 bumpalo = "3.14.0"
 gimli = { version = "0.31.1", optional = true }
 
 [dev-dependencies]
-anyhow = "1.0.40"
+anyhow.workspace = true
+inf-wasmparser.workspace = true
 libtest-mimic = "0.8.1"
-wasmparser = "0.223.0"
 wat = "1.222.0"
-rand = { version = "0.8.4", features = ["small_rng"] }
+rand = { version = "0.9.0", features = ["small_rng"] }
 
 [features]
 default = ['wasm-module', 'component-model']

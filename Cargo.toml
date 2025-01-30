@@ -3,11 +3,12 @@
 resolver = "2"
 
 members = [
-    "inf-wast"
+    "inf-wast",
+    "inf-wasmparser",
 ]
 
 [workspace.package]
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 license = "MIT"
 homepage = "https://inferara.com"
@@ -15,3 +16,18 @@ repository = "https://github.com/Inferara/inf-wasm-tools"
 
 [workspace.dependencies]
 inf-wast = { path = "inf-wast" }
+inf-wasmparser = { path = "inf-wasmparser" }
+anyhow = "1.0.40"
+leb128 = "0.2.5"
+
+# This is inherited from the origin. Shutting down all clippy warnings would require
+# many chages in the codebase.
+[workspace.lints.clippy]
+# The default set of lints in Clippy is viewed as "too noisy" right now so
+# they're all turned off by default. Selective lints are then enabled below as
+# necessary.
+all = { level = 'allow', priority = -1 }
+clone_on_copy = 'warn'
+map_clone = 'warn'
+unnecessary_to_owned = 'warn'
+manual_strip = 'warn'

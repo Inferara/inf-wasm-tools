@@ -1,4 +1,4 @@
-use wasmparser::*;
+use inf_wasmparser::*;
 
 #[test]
 fn name_annotations() -> anyhow::Result<()> {
