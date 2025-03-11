@@ -2362,7 +2362,6 @@ impl ComponentState {
         offset: usize,
     ) -> Result<ComponentFuncType> {
         let mut info = TypeInfo::new();
-
         let mut set = Set::default();
         set.reserve(core::cmp::max(
             ty.params.len(),
@@ -2402,7 +2401,6 @@ impl ComponentState {
                 Ok(ty)
             })
             .transpose()?;
-
         Ok(ComponentFuncType {
             info,
             params,

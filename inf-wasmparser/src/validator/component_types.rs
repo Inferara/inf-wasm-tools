@@ -2714,7 +2714,6 @@ impl<'a> SubtypeCx<'a> {
             self.component_val_type(a, b, offset)
                 .with_context(|| format!("type mismatch in function parameter `{an}`"))?;
         }
-
         match (&a.result, &b.result) {
             (Some(a), Some(b)) => self
                 .component_val_type(a, b, offset)

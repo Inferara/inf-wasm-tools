@@ -24,9 +24,9 @@ mod tests {
 
     #[test]
     fn test_uzumaki_i64() {
-        // (module (func (export "uzumaki")(result i32)
-        //     (local $c i32)
-        //     i32.uzumaki
+        // (module (func (export "uzumaki")(result i64)
+        //     (local $c i64)
+        //     i64.uzumaki
         //     local.set $c
         //     local.get $c
         // ))

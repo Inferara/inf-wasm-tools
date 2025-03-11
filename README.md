@@ -21,6 +21,7 @@ This project is licensed under the MIT license.
 ## Exceptions
 
 - [inf-wast](./inf-wast/) is a fork of [wast](https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wast) from [wasm-tools](https://github.com/bytecodealliance/wasm-tools/tree/main) which is under the Apache 2.0 license with the LLVM exception, so it inherits the same license.
+- [inf-wasmparser](./inf-wasmparser/) is a fork of [wasmparser](https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wasmparser) from [wasm-tools](https://github.com/bytecodealliance/wasm-tools/tree/main) which is under the Apache 2.0 license with the LLVM exception, so it inherits the same license.
 
 ### Contributions
 
