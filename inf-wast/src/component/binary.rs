@@ -76,11 +76,7 @@ fn encode_type(encoder: ComponentTypeEncoder, ty: &TypeDef) {
             let mut encoder = encoder.function();
             encoder.params(f.params.iter().map(|p| (p.name, &p.ty)));
 
-            if f.results.len() == 1 && f.results[0].name.is_none() {
-                encoder.result(&f.results[0].ty);
-            } else {
-                encoder.results(f.results.iter().map(|r| (r.name.unwrap_or(""), &r.ty)));
-            }
+            encoder.result(f.result.as_ref().map(|ty| ty.into()));
         }
         TypeDef::Component(c) => {
             encoder.component(&c.into());
@@ -133,7 +129,7 @@ fn encode_defined_type(encoder: ComponentDefinedTypeEncoder, ty: &ComponentDefin
         }
         ComponentDefinedType::Own(i) => encoder.own((*i).into()),
         ComponentDefinedType::Borrow(i) => encoder.borrow((*i).into()),
-        ComponentDefinedType::Stream(s) => encoder.stream(s.element.as_ref().into()),
+        ComponentDefinedType::Stream(s) => encoder.stream(s.element.as_deref().map(Into::into)),
         ComponentDefinedType::Future(f) => encoder.future(f.element.as_deref().map(Into::into)),
     }
 }
@@ -353,9 +349,9 @@ impl<'a> Encoder<'a> {
                 self.core_func_names.push(name);
                 self.funcs.thread_spawn(info.ty.into());
             }
-            CanonicalFuncKind::ThreadHwConcurrency(_info) => {
+            CanonicalFuncKind::ThreadAvailableParallelism(_info) => {
                 self.core_func_names.push(name);
-                self.funcs.thread_hw_concurrency();
+                self.funcs.thread_available_parallelism();
             }
             CanonicalFuncKind::TaskBackpressure => {
                 self.core_func_names.push(name);
@@ -363,7 +359,11 @@ impl<'a> Encoder<'a> {
             }
             CanonicalFuncKind::TaskReturn(info) => {
                 self.core_func_names.push(name);
-                self.funcs.task_return(info.ty.into());
+                self.funcs.task_return(
+                    info.result
+                        .as_ref()
+                        .map(|ty| wasm_encoder::ComponentValType::from(ty)),
+                );
             }
             CanonicalFuncKind::TaskWait(info) => {
                 self.core_func_names.push(name);

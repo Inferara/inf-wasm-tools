@@ -17,8 +17,9 @@ repository = "https://github.com/Inferara/inf-wasm-tools"
 [workspace.dependencies]
 inf-wast = { path = "inf-wast" }
 inf-wasmparser = { path = "inf-wasmparser" }
-anyhow = "1.0.40"
+anyhow = "1.0.97"
 leb128 = "0.2.5"
+wasm-encoder = "0.226.0"
 
 # This is inherited from the origin. Shutting down all clippy warnings would require
 # many chages in the codebase.

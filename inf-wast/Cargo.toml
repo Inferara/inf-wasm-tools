@@ -18,7 +18,7 @@ workspace = true
 
 [dependencies]
 leb128.workspace = true
-wasm-encoder = "0.223.0"
+wasm-encoder.workspace = true
 unicode-width = "0.2.0"
 memchr = "2.4.1"
 bumpalo = "3.14.0"
@@ -28,7 +28,7 @@ gimli = { version = "0.31.1", optional = true }
 anyhow.workspace = true
 inf-wasmparser.workspace = true
 libtest-mimic = "0.8.1"
-wat = "1.222.0"
+wat = "1.225.0"
 rand = { version = "0.9.0", features = ["small_rng"] }
 
 [features]
