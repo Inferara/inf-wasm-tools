@@ -386,13 +386,15 @@ impl<'a> Resolver<'a> {
             CanonicalFuncKind::ThreadSpawn(info) => {
                 self.resolve_ns(&mut info.ty, Ns::CoreType)?;
             }
-            CanonicalFuncKind::ThreadHwConcurrency(_)
+            CanonicalFuncKind::ThreadAvailableParallelism(_)
             | CanonicalFuncKind::TaskBackpressure
             | CanonicalFuncKind::TaskYield(_)
             | CanonicalFuncKind::SubtaskDrop
             | CanonicalFuncKind::ErrorContextDrop => {}
             CanonicalFuncKind::TaskReturn(info) => {
-                self.resolve_ns(&mut info.ty, Ns::CoreType)?;
+                if let Some(ty) = &mut info.result {
+                    self.component_val_type(ty)?;
+                }
             }
             CanonicalFuncKind::TaskWait(info) => {
                 self.core_item_ref(&mut info.memory)?;
@@ -553,7 +555,9 @@ impl<'a> Resolver<'a> {
                 self.resolve_ns(t, Ns::Type)?;
             }
             ComponentDefinedType::Stream(s) => {
-                self.component_val_type(&mut s.element)?;
+                if let Some(ty) = &mut s.element {
+                    self.component_val_type(ty)?;
+                }
             }
             ComponentDefinedType::Future(f) => {
                 if let Some(ty) = &mut f.element {
@@ -616,8 +620,8 @@ impl<'a> Resolver<'a> {
                     self.component_val_type(&mut param.ty)?;
                 }
 
-                for result in f.results.iter_mut() {
-                    self.component_val_type(&mut result.ty)?;
+                if let Some(result) = &mut f.result {
+                    self.component_val_type(result)?;
                 }
             }
             TypeDef::Component(c) => {
@@ -960,7 +964,7 @@ impl<'a> ComponentState<'a> {
                 | CanonicalFuncKind::ResourceRep(_)
                 | CanonicalFuncKind::ResourceDrop(_)
                 | CanonicalFuncKind::ThreadSpawn(_)
-                | CanonicalFuncKind::ThreadHwConcurrency(_)
+                | CanonicalFuncKind::ThreadAvailableParallelism(_)
                 | CanonicalFuncKind::TaskBackpressure
                 | CanonicalFuncKind::TaskReturn(_)
                 | CanonicalFuncKind::TaskWait(_)

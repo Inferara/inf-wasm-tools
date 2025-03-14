@@ -269,7 +269,7 @@ impl<'a> Expander<'a> {
             | CanonicalFuncKind::ResourceRep(_)
             | CanonicalFuncKind::ResourceDrop(_)
             | CanonicalFuncKind::ThreadSpawn(_)
-            | CanonicalFuncKind::ThreadHwConcurrency(_)
+            | CanonicalFuncKind::ThreadAvailableParallelism(_)
             | CanonicalFuncKind::TaskBackpressure
             | CanonicalFuncKind::TaskReturn(_)
             | CanonicalFuncKind::TaskWait(_)
@@ -338,12 +338,12 @@ impl<'a> Expander<'a> {
                 name: func.name,
                 kind: CanonicalFuncKind::ThreadSpawn(info),
             }),
-            CoreFuncKind::ThreadHwConcurrency(info) => {
+            CoreFuncKind::ThreadAvailableParallelism(info) => {
                 ComponentField::CanonicalFunc(CanonicalFunc {
                     span: func.span,
                     id: func.id,
                     name: func.name,
-                    kind: CanonicalFuncKind::ThreadHwConcurrency(info),
+                    kind: CanonicalFuncKind::ThreadAvailableParallelism(info),
                 })
             }
             CoreFuncKind::TaskBackpressure => ComponentField::CanonicalFunc(CanonicalFunc {
@@ -599,8 +599,8 @@ impl<'a> Expander<'a> {
             self.expand_component_val_ty(&mut param.ty);
         }
 
-        for result in ty.results.iter_mut() {
-            self.expand_component_val_ty(&mut result.ty);
+        if let Some(result) = &mut ty.result {
+            self.expand_component_val_ty(result);
         }
     }
 
@@ -762,7 +762,9 @@ impl<'a> Expander<'a> {
             }
             ComponentDefinedType::Own(_) | ComponentDefinedType::Borrow(_) => {}
             ComponentDefinedType::Stream(t) => {
-                self.expand_component_val_ty(&mut t.element);
+                if let Some(ty) = &mut t.element {
+                    self.expand_component_val_ty(ty);
+                }
             }
             ComponentDefinedType::Future(t) => {
                 if let Some(ty) = &mut t.element {
