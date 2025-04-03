@@ -1,3 +1,4 @@
+[![Build](https://github.com/Inferara/inf-wasm-tools/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Inferara/inf-wasm-tools/actions/workflows/build.yml)
 <div align="center">
   <h1><code>Inferara wasm-tools</code></h1>
 
@@ -26,3 +27,10 @@ This project is licensed under the MIT license.
 ### Contributions
 
 Are welcome!
+
+### Packages
+
+| Package |
+| ------- | 
+| ![Crates.io Version](https://img.shields.io/crates/v/inf-wast?label=inf-wast) |
+| ![Crates.io Version](https://img.shields.io/crates/v/inf-wast?label=inf-wast) |
