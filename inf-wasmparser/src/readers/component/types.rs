@@ -185,6 +185,9 @@ pub enum PrimitiveValType {
     Char,
     /// The type is a string.
     String,
+    /// The error-context type. (added with the async proposal for the component
+    /// model)
+    ErrorContext,
 }
 
 impl PrimitiveValType {
@@ -203,6 +206,7 @@ impl PrimitiveValType {
             0x75 => PrimitiveValType::F64,
             0x74 => PrimitiveValType::Char,
             0x73 => PrimitiveValType::String,
+            0x64 => PrimitiveValType::ErrorContext,
             _ => return None,
         })
     }
@@ -241,6 +245,7 @@ impl fmt::Display for PrimitiveValType {
             F64 => "f64",
             Char => "char",
             String => "string",
+            ErrorContext => "error-context",
         };
         s.fmt(f)
     }
@@ -282,14 +287,7 @@ impl<'a> FromReader<'a> for ComponentType<'a> {
                 let params = reader
                     .read_iter(MAX_WASM_FUNCTION_PARAMS, "component function parameters")?
                     .collect::<Result<_>>()?;
-                let result = match reader.read_u8()? {
-                    0x00 => Some(reader.read()?),
-                    0x01 => match reader.read_u8()? {
-                        0x00 => None,
-                        x => return reader.invalid_leading_byte(x, "number of results"),
-                    },
-                    x => return reader.invalid_leading_byte(x, "component function results"),
-                };
+                let result = read_resultlist(reader)?;
                 ComponentType::Func(ComponentFuncType { params, result })
             }
             0x41 => ComponentType::Component(
@@ -396,6 +394,17 @@ pub struct ComponentFuncType<'a> {
     pub result: Option<ComponentValType>,
 }
 
+pub(crate) fn read_resultlist(reader: &mut BinaryReader<'_>) -> Result<Option<ComponentValType>> {
+    match reader.read_u8()? {
+        0x00 => Ok(Some(reader.read()?)),
+        0x01 => match reader.read_u8()? {
+            0x00 => Ok(None),
+            x => return reader.invalid_leading_byte(x, "number of results"),
+        },
+        x => return reader.invalid_leading_byte(x, "component function results"),
+    }
+}
+
 /// Represents a case in a variant type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VariantCase<'a> {
@@ -455,8 +464,6 @@ pub enum ComponentDefinedType<'a> {
     Future(Option<ComponentValType>),
     /// A stream type with the specified payload type.
     Stream(Option<ComponentValType>),
-    /// The error-context type.
-    ErrorContext,
 }
 
 impl<'a> ComponentDefinedType<'a> {
@@ -498,7 +505,6 @@ impl<'a> ComponentDefinedType<'a> {
             0x68 => ComponentDefinedType::Borrow(reader.read()?),
             0x65 => ComponentDefinedType::Future(reader.read()?),
             0x66 => ComponentDefinedType::Stream(reader.read()?),
-            0x64 => ComponentDefinedType::ErrorContext,
             x => return reader.invalid_leading_byte(x, "component defined type"),
         })
     }
