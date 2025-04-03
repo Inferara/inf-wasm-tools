@@ -1,11 +1,13 @@
 use anyhow::Result;
 use criterion::{criterion_group, criterion_main, Criterion};
+use inf_wasmparser::VisitSimdOperator;
+use inf_wasmparser::{
+    DataKind, ElementKind, Parser, Payload, Validator, VisitOperator, WasmFeatures,
+};
 use once_cell::unsync::Lazy;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
-use wasmparser::VisitSimdOperator;
-use wasmparser::{DataKind, ElementKind, Parser, Payload, Validator, VisitOperator, WasmFeatures};
 
 /// A benchmark input.
 pub struct BenchmarkInput {
@@ -49,18 +51,18 @@ fn collect_test_files(path: &Path, list: &mut Vec<BenchmarkInput>) -> Result<()>
             }
             Some("wast") => {
                 let contents = fs::read_to_string(&path)?;
-                let buf = match wast::parser::ParseBuffer::new(&contents) {
+                let buf = match inf_wast::parser::ParseBuffer::new(&contents) {
                     Ok(buf) => buf,
                     Err(_) => continue,
                 };
-                let wast: wast::Wast<'_> = match wast::parser::parse(&buf) {
+                let wast: inf_wast::Wast<'_> = match inf_wast::parser::parse(&buf) {
                     Ok(wast) => wast,
                     Err(_) => continue,
                 };
                 for directive in wast.directives {
                     match directive {
-                        wast::WastDirective::Module(mut module)
-                        | wast::WastDirective::ModuleDefinition(mut module) => {
+                        inf_wast::WastDirective::Module(mut module)
+                        | inf_wast::WastDirective::ModuleDefinition(mut module) => {
                             let wasm = module.encode()?;
                             list.push(BenchmarkInput::new(path.clone(), wasm));
                         }
@@ -133,12 +135,12 @@ fn read_all_wasm(wasm: &[u8]) -> Result<()> {
                         }
                     }
                     match item.items {
-                        wasmparser::ElementItems::Functions(r) => {
+                        inf_wasmparser::ElementItems::Functions(r) => {
                             for op in r {
                                 op?;
                             }
                         }
-                        wasmparser::ElementItems::Expressions(_, r) => {
+                        inf_wasmparser::ElementItems::Expressions(_, r) => {
                             for op in r {
                                 op?;
                             }
@@ -160,7 +162,7 @@ fn read_all_wasm(wasm: &[u8]) -> Result<()> {
                 let mut reader = body.get_binary_reader();
                 for _ in 0..reader.read_var_u32()? {
                     reader.read_var_u32()?;
-                    reader.read::<wasmparser::ValType>()?;
+                    reader.read::<inf_wasmparser::ValType>()?;
                 }
                 while !reader.eof() {
                     reader.visit_operator(&mut NopVisit)?;
@@ -380,10 +382,10 @@ impl<'a> VisitOperator<'a> for NopVisit {
         Some(self)
     }
 
-    wasmparser::for_each_visit_operator!(define_visit_operator);
+    inf_wasmparser::for_each_visit_operator!(define_visit_operator);
 }
 
 #[allow(unused_variables)]
 impl<'a> VisitSimdOperator<'a> for NopVisit {
-    wasmparser::for_each_visit_simd_operator!(define_visit_operator);
+    inf_wasmparser::for_each_visit_simd_operator!(define_visit_operator);
 }

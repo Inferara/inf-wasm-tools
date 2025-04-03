@@ -18,10 +18,10 @@ use crate::limits::*;
 use crate::prelude::*;
 use crate::validator::names::{ComponentName, ComponentNameKind, KebabStr, KebabString};
 use crate::{
-    BinaryReaderError, CanonicalOption, ComponentExportName, ComponentExternalKind,
-    ComponentOuterAliasKind, ComponentTypeRef, CompositeInnerType, ExternalKind, FuncType,
-    GlobalType, InstantiationArgKind, MemoryType, PackedIndex, RefType, Result, SubType, TableType,
-    TypeBounds, ValType, WasmFeatures,
+    BinaryReaderError, CanonicalFunction, CanonicalOption, ComponentExportName,
+    ComponentExternalKind, ComponentOuterAliasKind, ComponentTypeRef, CompositeInnerType,
+    ExternalKind, FuncType, GlobalType, InstantiationArgKind, MemoryType, PackedIndex, RefType,
+    Result, SubType, TableType, TypeBounds, ValType, WasmFeatures,
 };
 use core::mem;
 
@@ -346,7 +346,7 @@ impl ComponentState {
                 types.push(ty).into()
             }
             crate::ComponentType::Func(ty) => {
-                let ty = current(components).create_function_type(ty, types, features, offset)?;
+                let ty = current(components).create_function_type(ty, types, offset)?;
                 types.push(ty).into()
             }
             crate::ComponentType::Component(decls) => {
@@ -721,8 +721,7 @@ impl ComponentState {
             // named.
             ComponentDefinedType::Primitive(_)
             | ComponentDefinedType::Flags(_)
-            | ComponentDefinedType::Enum(_)
-            | ComponentDefinedType::ErrorContext => true,
+            | ComponentDefinedType::Enum(_) => true,
 
             // Referenced types of all these aggregates must all be
             // named.
@@ -777,7 +776,7 @@ impl ComponentState {
         ty.params
             .iter()
             .map(|(_, ty)| ty)
-            .chain(ty.results.iter().map(|(_, ty)| ty))
+            .chain(&ty.result)
             .all(|ty| types.type_named_valtype(ty, set))
     }
 
@@ -952,11 +951,116 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn lift_function(
+    pub fn canonical_function(
+        &mut self,
+        func: CanonicalFunction,
+        types: &mut TypeAlloc,
+        offset: usize,
+        features: &WasmFeatures,
+    ) -> Result<()> {
+        match func {
+            CanonicalFunction::Lift {
+                core_func_index,
+                type_index,
+                options,
+            } => self.lift_function(
+                core_func_index,
+                type_index,
+                &options,
+                types,
+                offset,
+                features,
+            ),
+            CanonicalFunction::Lower {
+                func_index,
+                options,
+            } => self.lower_function(func_index, &options, types, offset, features),
+            CanonicalFunction::ResourceNew { resource } => {
+                self.resource_new(resource, types, offset)
+            }
+            CanonicalFunction::ResourceDrop { resource } => {
+                self.resource_drop(resource, types, offset)
+            }
+            CanonicalFunction::ResourceDropAsync { resource } => {
+                self.resource_drop_async(resource, types, offset, features)
+            }
+            CanonicalFunction::ResourceRep { resource } => {
+                self.resource_rep(resource, types, offset)
+            }
+            CanonicalFunction::ThreadSpawn { func_ty_index } => {
+                self.thread_spawn(func_ty_index, types, offset, features)
+            }
+            CanonicalFunction::ThreadAvailableParallelism => {
+                self.thread_available_parallelism(types, offset, features)
+            }
+            CanonicalFunction::BackpressureSet => self.backpressure_set(types, offset, features),
+            CanonicalFunction::TaskReturn { result, options } => {
+                self.task_return(&result, &options, types, offset, features)
+            }
+            CanonicalFunction::Yield { async_ } => self.yield_(async_, types, offset, features),
+            CanonicalFunction::SubtaskDrop => self.subtask_drop(types, offset, features),
+            CanonicalFunction::StreamNew { ty } => self.stream_new(ty, types, offset, features),
+            CanonicalFunction::StreamRead { ty, options } => {
+                self.stream_read(ty, &options, types, offset, features)
+            }
+            CanonicalFunction::StreamWrite { ty, options } => {
+                self.stream_write(ty, &options, types, offset, features)
+            }
+            CanonicalFunction::StreamCancelRead { ty, async_ } => {
+                self.stream_cancel_read(ty, async_, types, offset, features)
+            }
+            CanonicalFunction::StreamCancelWrite { ty, async_ } => {
+                self.stream_cancel_write(ty, async_, types, offset, features)
+            }
+            CanonicalFunction::StreamCloseReadable { ty } => {
+                self.stream_close_readable(ty, types, offset, features)
+            }
+            CanonicalFunction::StreamCloseWritable { ty } => {
+                self.stream_close_writable(ty, types, offset, features)
+            }
+            CanonicalFunction::FutureNew { ty } => self.future_new(ty, types, offset, features),
+            CanonicalFunction::FutureRead { ty, options } => {
+                self.future_read(ty, &options, types, offset, features)
+            }
+            CanonicalFunction::FutureWrite { ty, options } => {
+                self.future_write(ty, options.into_vec(), types, offset, features)
+            }
+            CanonicalFunction::FutureCancelRead { ty, async_ } => {
+                self.future_cancel_read(ty, async_, types, offset, features)
+            }
+            CanonicalFunction::FutureCancelWrite { ty, async_ } => {
+                self.future_cancel_write(ty, async_, types, offset, features)
+            }
+            CanonicalFunction::FutureCloseReadable { ty } => {
+                self.future_close_readable(ty, types, offset, features)
+            }
+            CanonicalFunction::FutureCloseWritable { ty } => {
+                self.future_close_writable(ty, types, offset, features)
+            }
+            CanonicalFunction::ErrorContextNew { options } => {
+                self.error_context_new(options.into_vec(), types, offset, features)
+            }
+            CanonicalFunction::ErrorContextDebugMessage { options } => {
+                self.error_context_debug_message(options.into_vec(), types, offset, features)
+            }
+            CanonicalFunction::ErrorContextDrop => self.error_context_drop(types, offset, features),
+            CanonicalFunction::WaitableSetNew => self.waitable_set_new(types, offset, features),
+            CanonicalFunction::WaitableSetWait { async_, memory } => {
+                self.waitable_set_wait(async_, memory, types, offset, features)
+            }
+            CanonicalFunction::WaitableSetPoll { async_, memory } => {
+                self.waitable_set_poll(async_, memory, types, offset, features)
+            }
+            CanonicalFunction::WaitableSetDrop => self.waitable_set_drop(types, offset, features),
+            CanonicalFunction::WaitableJoin => self.waitable_join(types, offset, features),
+        }
+    }
+
+    fn lift_function(
         &mut self,
         core_func_index: u32,
         type_index: u32,
-        options: Vec<CanonicalOption>,
+        options: &[CanonicalOption],
         types: &TypeList,
         offset: usize,
         features: &WasmFeatures,
@@ -966,30 +1070,8 @@ impl ComponentState {
 
         // Lifting a function is for an export, so match the expected canonical ABI
         // export signature
-        let info = ty.lower(
-            types,
-            if options.contains(&CanonicalOption::Async) {
-                if options
-                    .iter()
-                    .any(|v| matches!(v, CanonicalOption::Callback(_)))
-                {
-                    Abi::LiftAsync
-                } else {
-                    Abi::LiftAsyncStackful
-                }
-            } else {
-                Abi::LiftSync
-            },
-        );
-        self.check_options(
-            Some(core_ty),
-            &info,
-            &options,
-            types,
-            offset,
-            features,
-            true,
-        )?;
+        let info = ty.lower(types, Abi::for_lift(options));
+        self.check_options(Some(core_ty), &info, options, types, offset, features, true)?;
 
         if core_ty.params() != info.params.as_slice() {
             bail!(
@@ -1017,10 +1099,10 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn lower_function(
+    fn lower_function(
         &mut self,
         func_index: u32,
-        options: Vec<CanonicalOption>,
+        options: &[CanonicalOption],
         types: &mut TypeAlloc,
         offset: usize,
         features: &WasmFeatures,
@@ -1038,7 +1120,7 @@ impl ComponentState {
             },
         );
 
-        self.check_options(None, &info, &options, types, offset, features, true)?;
+        self.check_options(None, &info, options, types, offset, features, true)?;
 
         let id = types.intern_func_type(info.into_func_type(), offset);
         self.core_funcs.push(id);
@@ -1046,43 +1128,47 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn resource_new(
-        &mut self,
-        resource: u32,
-        types: &mut TypeAlloc,
-        offset: usize,
-    ) -> Result<()> {
+    fn resource_new(&mut self, resource: u32, types: &mut TypeAlloc, offset: usize) -> Result<()> {
         let rep = self.check_local_resource(resource, types, offset)?;
         let id = types.intern_func_type(FuncType::new([rep], [ValType::I32]), offset);
         self.core_funcs.push(id);
         Ok(())
     }
 
-    pub fn resource_drop(
-        &mut self,
-        resource: u32,
-        types: &mut TypeAlloc,
-        offset: usize,
-    ) -> Result<()> {
+    fn resource_drop(&mut self, resource: u32, types: &mut TypeAlloc, offset: usize) -> Result<()> {
         self.resource_at(resource, types, offset)?;
         let id = types.intern_func_type(FuncType::new([ValType::I32], []), offset);
         self.core_funcs.push(id);
         Ok(())
     }
 
-    pub fn resource_rep(
+    fn resource_drop_async(
         &mut self,
         resource: u32,
         types: &mut TypeAlloc,
         offset: usize,
+        features: &WasmFeatures,
     ) -> Result<()> {
+        if !features.component_model_async() {
+            bail!(
+                offset,
+                "`resource.drop` as `async` requires the component model async feature"
+            )
+        }
+        self.resource_at(resource, types, offset)?;
+        let id = types.intern_func_type(FuncType::new([ValType::I32], []), offset);
+        self.core_funcs.push(id);
+        Ok(())
+    }
+
+    fn resource_rep(&mut self, resource: u32, types: &mut TypeAlloc, offset: usize) -> Result<()> {
         let rep = self.check_local_resource(resource, types, offset)?;
         let id = types.intern_func_type(FuncType::new([ValType::I32], [rep]), offset);
         self.core_funcs.push(id);
         Ok(())
     }
 
-    pub fn task_backpressure(
+    fn backpressure_set(
         &mut self,
         types: &mut TypeAlloc,
         offset: usize,
@@ -1091,7 +1177,7 @@ impl ComponentState {
         if !features.component_model_async() {
             bail!(
                 offset,
-                "`task.backpressure` requires the component model async feature"
+                "`backpressure.set` requires the component model async feature"
             )
         }
 
@@ -1100,9 +1186,10 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn task_return(
+    fn task_return(
         &mut self,
         result: &Option<crate::ComponentValType>,
+        options: &[CanonicalOption],
         types: &mut TypeAlloc,
         offset: usize,
         features: &WasmFeatures,
@@ -1112,6 +1199,21 @@ impl ComponentState {
                 offset,
                 "`task.return` requires the component model async feature"
             )
+        }
+
+        for option in options {
+            let invalid = match option {
+                CanonicalOption::UTF8
+                | CanonicalOption::UTF16
+                | CanonicalOption::CompactUTF16
+                | CanonicalOption::Memory(_)
+                | CanonicalOption::Realloc(_) => continue,
+
+                CanonicalOption::PostReturn(_) => "post-return",
+                CanonicalOption::Async => "async",
+                CanonicalOption::Callback(_) => "callback",
+            };
+            bail!(offset, "cannot specify `{invalid}` option on `task.return`")
         }
 
         let info = ComponentFuncType {
@@ -1132,9 +1234,11 @@ impl ComponentState {
                     ))
                 })
                 .collect::<Result<_>>()?,
-            results: Box::new([]),
+            result: None,
         }
-        .lower(types, Abi::LiftSync);
+        .lower(types, Abi::LowerSync);
+
+        self.check_options(None, &info, options, types, offset, features, true)?;
 
         assert!(info.results.iter().next().is_none());
 
@@ -1143,51 +1247,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn task_wait(
-        &mut self,
-        _async_: bool,
-        memory: u32,
-        types: &mut TypeAlloc,
-        offset: usize,
-        features: &WasmFeatures,
-    ) -> Result<()> {
-        if !features.component_model_async() {
-            bail!(
-                offset,
-                "`task.wait` requires the component model async feature"
-            )
-        }
-
-        self.memory_at(memory, offset)?;
-
-        self.core_funcs
-            .push(types.intern_func_type(FuncType::new([ValType::I32], [ValType::I32]), offset));
-        Ok(())
-    }
-
-    pub fn task_poll(
-        &mut self,
-        _async_: bool,
-        memory: u32,
-        types: &mut TypeAlloc,
-        offset: usize,
-        features: &WasmFeatures,
-    ) -> Result<()> {
-        if !features.component_model_async() {
-            bail!(
-                offset,
-                "`task.poll` requires the component model async feature"
-            )
-        }
-
-        self.memory_at(memory, offset)?;
-
-        self.core_funcs
-            .push(types.intern_func_type(FuncType::new([ValType::I32], [ValType::I32]), offset));
-        Ok(())
-    }
-
-    pub fn task_yield(
+    fn yield_(
         &mut self,
         _async_: bool,
         types: &mut TypeAlloc,
@@ -1195,10 +1255,7 @@ impl ComponentState {
         features: &WasmFeatures,
     ) -> Result<()> {
         if !features.component_model_async() {
-            bail!(
-                offset,
-                "`task.yield` requires the component model async feature"
-            )
+            bail!(offset, "`yield` requires the component model async feature")
         }
 
         self.core_funcs
@@ -1206,7 +1263,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn subtask_drop(
+    fn subtask_drop(
         &mut self,
         types: &mut TypeAlloc,
         offset: usize,
@@ -1224,7 +1281,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn stream_new(
+    fn stream_new(
         &mut self,
         ty: u32,
         types: &mut TypeAlloc,
@@ -1248,10 +1305,10 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn stream_read(
+    fn stream_read(
         &mut self,
         ty: u32,
-        options: Vec<CanonicalOption>,
+        options: &[CanonicalOption],
         types: &mut TypeAlloc,
         offset: usize,
         features: &WasmFeatures,
@@ -1273,17 +1330,17 @@ impl ComponentState {
         info.requires_realloc = payload_type
             .map(|ty| ty.contains_ptr(types))
             .unwrap_or_default();
-        self.check_options(None, &info, &options, types, offset, features, true)?;
+        self.check_options(None, &info, options, types, offset, features, true)?;
 
         self.core_funcs
             .push(types.intern_func_type(FuncType::new([ValType::I32; 3], [ValType::I32]), offset));
         Ok(())
     }
 
-    pub fn stream_write(
+    fn stream_write(
         &mut self,
         ty: u32,
-        options: Vec<CanonicalOption>,
+        options: &[CanonicalOption],
         types: &mut TypeAlloc,
         offset: usize,
         features: &WasmFeatures,
@@ -1303,14 +1360,14 @@ impl ComponentState {
         let mut info = LoweringInfo::default();
         info.requires_memory = true;
         info.requires_realloc = false;
-        self.check_options(None, &info, &options, types, offset, features, true)?;
+        self.check_options(None, &info, options, types, offset, features, true)?;
 
         self.core_funcs
             .push(types.intern_func_type(FuncType::new([ValType::I32; 3], [ValType::I32]), offset));
         Ok(())
     }
 
-    pub fn stream_cancel_read(
+    fn stream_cancel_read(
         &mut self,
         ty: u32,
         _async_: bool,
@@ -1335,7 +1392,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn stream_cancel_write(
+    fn stream_cancel_write(
         &mut self,
         ty: u32,
         _async_: bool,
@@ -1360,7 +1417,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn stream_close_readable(
+    fn stream_close_readable(
         &mut self,
         ty: u32,
         types: &mut TypeAlloc,
@@ -1380,11 +1437,11 @@ impl ComponentState {
         };
 
         self.core_funcs
-            .push(types.intern_func_type(FuncType::new([ValType::I32], []), offset));
+            .push(types.intern_func_type(FuncType::new([ValType::I32; 2], []), offset));
         Ok(())
     }
 
-    pub fn stream_close_writable(
+    fn stream_close_writable(
         &mut self,
         ty: u32,
         types: &mut TypeAlloc,
@@ -1408,7 +1465,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn future_new(
+    fn future_new(
         &mut self,
         ty: u32,
         types: &mut TypeAlloc,
@@ -1432,10 +1489,10 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn future_read(
+    fn future_read(
         &mut self,
         ty: u32,
-        options: Vec<CanonicalOption>,
+        options: &[CanonicalOption],
         types: &mut TypeAlloc,
         offset: usize,
         features: &WasmFeatures,
@@ -1457,14 +1514,14 @@ impl ComponentState {
         info.requires_realloc = payload_type
             .map(|ty| ty.contains_ptr(types))
             .unwrap_or_default();
-        self.check_options(None, &info, &options, types, offset, features, true)?;
+        self.check_options(None, &info, options, types, offset, features, true)?;
 
         self.core_funcs
             .push(types.intern_func_type(FuncType::new([ValType::I32; 2], [ValType::I32]), offset));
         Ok(())
     }
 
-    pub fn future_write(
+    fn future_write(
         &mut self,
         ty: u32,
         options: Vec<CanonicalOption>,
@@ -1494,7 +1551,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn future_cancel_read(
+    fn future_cancel_read(
         &mut self,
         ty: u32,
         _async_: bool,
@@ -1519,7 +1576,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn future_cancel_write(
+    fn future_cancel_write(
         &mut self,
         ty: u32,
         _async_: bool,
@@ -1544,7 +1601,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn future_close_readable(
+    fn future_close_readable(
         &mut self,
         ty: u32,
         types: &mut TypeAlloc,
@@ -1564,11 +1621,11 @@ impl ComponentState {
         };
 
         self.core_funcs
-            .push(types.intern_func_type(FuncType::new([ValType::I32], []), offset));
+            .push(types.intern_func_type(FuncType::new([ValType::I32; 2], []), offset));
         Ok(())
     }
 
-    pub fn future_close_writable(
+    fn future_close_writable(
         &mut self,
         ty: u32,
         types: &mut TypeAlloc,
@@ -1592,7 +1649,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn error_context_new(
+    fn error_context_new(
         &mut self,
         options: Vec<CanonicalOption>,
         types: &mut TypeAlloc,
@@ -1616,7 +1673,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn error_context_debug_message(
+    fn error_context_debug_message(
         &mut self,
         options: Vec<CanonicalOption>,
         types: &mut TypeAlloc,
@@ -1640,7 +1697,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn error_context_drop(
+    fn error_context_drop(
         &mut self,
         types: &mut TypeAlloc,
         offset: usize,
@@ -1655,6 +1712,104 @@ impl ComponentState {
 
         self.core_funcs
             .push(types.intern_func_type(FuncType::new([ValType::I32], []), offset));
+        Ok(())
+    }
+
+    fn waitable_set_new(
+        &mut self,
+        types: &mut TypeAlloc,
+        offset: usize,
+        features: &WasmFeatures,
+    ) -> Result<()> {
+        if !features.component_model_async() {
+            bail!(
+                offset,
+                "`waitable-set.new` requires the component model async feature"
+            )
+        }
+
+        self.core_funcs
+            .push(types.intern_func_type(FuncType::new([], [ValType::I32]), offset));
+        Ok(())
+    }
+
+    fn waitable_set_wait(
+        &mut self,
+        _async_: bool,
+        memory: u32,
+        types: &mut TypeAlloc,
+        offset: usize,
+        features: &WasmFeatures,
+    ) -> Result<()> {
+        if !features.component_model_async() {
+            bail!(
+                offset,
+                "`waitable-set.wait` requires the component model async feature"
+            )
+        }
+
+        self.memory_at(memory, offset)?;
+
+        self.core_funcs
+            .push(types.intern_func_type(FuncType::new([ValType::I32; 2], [ValType::I32]), offset));
+        Ok(())
+    }
+
+    fn waitable_set_poll(
+        &mut self,
+        _async_: bool,
+        memory: u32,
+        types: &mut TypeAlloc,
+        offset: usize,
+        features: &WasmFeatures,
+    ) -> Result<()> {
+        if !features.component_model_async() {
+            bail!(
+                offset,
+                "`waitable-set.poll` requires the component model async feature"
+            )
+        }
+
+        self.memory_at(memory, offset)?;
+
+        self.core_funcs
+            .push(types.intern_func_type(FuncType::new([ValType::I32; 2], [ValType::I32]), offset));
+        Ok(())
+    }
+
+    fn waitable_set_drop(
+        &mut self,
+        types: &mut TypeAlloc,
+        offset: usize,
+        features: &WasmFeatures,
+    ) -> Result<()> {
+        if !features.component_model_async() {
+            bail!(
+                offset,
+                "`waitable-set.drop` requires the component model async feature"
+            )
+        }
+
+        self.core_funcs
+            .push(types.intern_func_type(FuncType::new([ValType::I32], []), offset));
+        Ok(())
+    }
+
+    fn waitable_join(
+        &mut self,
+        types: &mut TypeAlloc,
+        offset: usize,
+        features: &WasmFeatures,
+    ) -> Result<()> {
+        if !features.component_model_async() {
+            bail!(
+                offset,
+                "`waitable.join` requires the component model async feature"
+            )
+        }
+
+        self.core_funcs
+            .push(types.intern_func_type(FuncType::new([ValType::I32; 2], []), offset));
         Ok(())
     }
 
@@ -1682,7 +1837,7 @@ impl ComponentState {
         bail!(offset, "type index {} is not a resource type", idx)
     }
 
-    pub fn thread_spawn(
+    fn thread_spawn(
         &mut self,
         func_ty_index: u32,
         types: &mut TypeAlloc,
@@ -1733,7 +1888,7 @@ impl ComponentState {
         Ok(())
     }
 
-    pub fn thread_hw_concurrency(
+    fn thread_available_parallelism(
         &mut self,
         types: &mut TypeAlloc,
         offset: usize,
@@ -1742,7 +1897,7 @@ impl ComponentState {
         if !features.shared_everything_threads() {
             bail!(
                 offset,
-                "`thread.hw_concurrency` requires the shared-everything-threads proposal"
+                "`thread.available_parallelism` requires the shared-everything-threads proposal"
             )
         }
 
@@ -1869,12 +2024,12 @@ impl ComponentState {
             );
         }
 
-        if ft.results.len() as u32 != results {
+        if u32::from(ft.result.is_some()) != results {
             bail!(
                 offset,
                 "component start function has a result count of {results} \
                  but the function type has a result count of {type_results}",
-                type_results = ft.results.len(),
+                type_results = u32::from(ft.result.is_some()),
             );
         }
 
@@ -1887,8 +2042,8 @@ impl ComponentState {
                 })?;
         }
 
-        for (_, ty) in ft.results.iter() {
-            self.values.push((*ty, false));
+        if let Some(ty) = ft.result {
+            self.values.push((ty, false));
         }
 
         self.has_start = true;
@@ -2359,21 +2514,15 @@ impl ComponentState {
         &self,
         ty: crate::ComponentFuncType,
         types: &TypeList,
-        features: &WasmFeatures,
         offset: usize,
     ) -> Result<ComponentFuncType> {
         let mut info = TypeInfo::new();
 
-        if ty.results.type_count() > 1 && !features.component_model_multiple_returns() {
-            bail!(
-                offset,
-                "multiple returns on a function is now a gated feature \
-                 -- https://github.com/WebAssembly/component-model/pull/368"
-            );
-        }
-
         let mut set = Set::default();
-        set.reserve(core::cmp::max(ty.params.len(), ty.results.type_count()));
+        set.reserve(core::cmp::max(
+            ty.params.len(),
+            usize::from(ty.result.is_some()),
+        ));
 
         let params = ty
             .params
@@ -2396,39 +2545,23 @@ impl ComponentState {
 
         set.clear();
 
-        let results = ty
-            .results
-            .iter()
-            .map(|(name, ty)| {
-                let name = name
-                    .map(|name| {
-                        let name = to_kebab_str(name, "function result", offset)?;
-                        if !set.insert(name) {
-                            bail!(
-                                offset,
-                                "function result name `{name}` conflicts with previous result name `{prev}`",
-                                prev = set.get(name).unwrap(),
-                            );
-                        }
-
-                        Ok(name.to_owned())
-                    })
-                    .transpose()?;
-
-                let ty = self.create_component_val_type(*ty, offset)?;
+        let result = ty
+            .result
+            .map(|ty| {
+                let ty = self.create_component_val_type(ty, offset)?;
                 let ty_info = ty.info(types);
                 if ty_info.contains_borrow() {
                     bail!(offset, "function result cannot contain a `borrow` type");
                 }
                 info.combine(ty.info(types), offset)?;
-                Ok((name, ty))
+                Ok(ty)
             })
-            .collect::<Result<_>>()?;
+            .transpose()?;
 
         Ok(ComponentFuncType {
             info,
             params,
-            results,
+            result,
         })
     }
 
@@ -3267,7 +3400,16 @@ impl ComponentState {
         offset: usize,
     ) -> Result<ComponentDefinedType> {
         match ty {
-            crate::ComponentDefinedType::Primitive(ty) => Ok(ComponentDefinedType::Primitive(ty)),
+            crate::ComponentDefinedType::Primitive(ty) => {
+                if ty == crate::PrimitiveValType::ErrorContext && !features.component_model_async()
+                {
+                    bail!(
+                        offset,
+                        "`error-context` requires the component model async feature"
+                    )
+                }
+                Ok(ComponentDefinedType::Primitive(ty))
+            }
             crate::ComponentDefinedType::Record(fields) => {
                 self.create_record_type(fields.as_ref(), types, offset)
             }
@@ -3281,7 +3423,7 @@ impl ComponentState {
                 self.create_tuple_type(tys.as_ref(), types, offset)
             }
             crate::ComponentDefinedType::Flags(names) => {
-                self.create_flags_type(names.as_ref(), features, offset)
+                self.create_flags_type(names.as_ref(), offset)
             }
             crate::ComponentDefinedType::Enum(cases) => {
                 self.create_enum_type(cases.as_ref(), offset)
@@ -3303,15 +3445,30 @@ impl ComponentState {
             crate::ComponentDefinedType::Borrow(idx) => Ok(ComponentDefinedType::Borrow(
                 self.resource_at(idx, types, offset)?,
             )),
-            crate::ComponentDefinedType::Future(ty) => Ok(ComponentDefinedType::Future(
-                ty.map(|ty| self.create_component_val_type(ty, offset))
-                    .transpose()?,
-            )),
-            crate::ComponentDefinedType::Stream(ty) => Ok(ComponentDefinedType::Stream(
-                ty.map(|ty| self.create_component_val_type(ty, offset))
-                    .transpose()?,
-            )),
-            crate::ComponentDefinedType::ErrorContext => Ok(ComponentDefinedType::ErrorContext),
+            crate::ComponentDefinedType::Future(ty) => {
+                if !features.component_model_async() {
+                    bail!(
+                        offset,
+                        "`future` requires the component model async feature"
+                    )
+                }
+                Ok(ComponentDefinedType::Future(
+                    ty.map(|ty| self.create_component_val_type(ty, offset))
+                        .transpose()?,
+                ))
+            }
+            crate::ComponentDefinedType::Stream(ty) => {
+                if !features.component_model_async() {
+                    bail!(
+                        offset,
+                        "`stream` requires the component model async feature"
+                    )
+                }
+                Ok(ComponentDefinedType::Stream(
+                    ty.map(|ty| self.create_component_val_type(ty, offset))
+                        .transpose()?,
+                ))
+            }
         }
     }
 
@@ -3442,12 +3599,7 @@ impl ComponentState {
         Ok(ComponentDefinedType::Tuple(TupleType { info, types }))
     }
 
-    fn create_flags_type(
-        &self,
-        names: &[&str],
-        features: &WasmFeatures,
-        offset: usize,
-    ) -> Result<ComponentDefinedType> {
+    fn create_flags_type(&self, names: &[&str], offset: usize) -> Result<ComponentDefinedType> {
         let mut names_set = IndexSet::default();
         names_set.reserve(names.len());
 
@@ -3455,14 +3607,8 @@ impl ComponentState {
             bail!(offset, "flags must have at least one entry");
         }
 
-        if names.len() > 32 && !features.component_model_more_flags() {
-            bail!(
-                offset,
-                "cannot have more than 32 flags; this was previously \
-                 accepted and if this is required for your project please \
-                 leave a comment on \
-                 https://github.com/WebAssembly/component-model/issues/370"
-            );
+        if names.len() > 32 {
+            bail!(offset, "cannot have more than 32 flags");
         }
 
         for name in names {
@@ -3822,8 +3968,11 @@ impl ComponentNameContext {
         if let ExternKind::Export = kind {
             match kebab.kind() {
                 ComponentNameKind::Label(_)
+                | ComponentNameKind::AsyncLabel(_)
                 | ComponentNameKind::Method(_)
+                | ComponentNameKind::AsyncMethod(_)
                 | ComponentNameKind::Static(_)
+                | ComponentNameKind::AsyncStatic(_)
                 | ComponentNameKind::Constructor(_)
                 | ComponentNameKind::Interface(_) => {}
 
@@ -3837,7 +3986,7 @@ impl ComponentNameContext {
 
         // Validate that the kebab name, if it has structure such as
         // `[method]a.b`, is indeed valid with respect to known resources.
-        self.validate(&kebab, ty, types, offset)
+        self.validate(&kebab, ty, types, offset, features)
             .with_context(|| format!("{} name `{kebab}` is not valid", kind.desc()))?;
 
         // Top-level kebab-names must all be unique, even between both imports
@@ -3878,6 +4027,7 @@ impl ComponentNameContext {
         ty: &ComponentEntityType,
         types: &TypeAlloc,
         offset: usize,
+        features: &WasmFeatures,
     ) -> Result<()> {
         let func = || {
             let id = match ty {
@@ -3887,8 +4037,23 @@ impl ComponentNameContext {
             Ok(&types[id])
         };
         match name.kind() {
+            ComponentNameKind::AsyncLabel(_)
+            | ComponentNameKind::AsyncMethod(_)
+            | ComponentNameKind::AsyncStatic(_) => {
+                if !features.component_model_async() {
+                    bail!(
+                        offset,
+                        "async kebab-names require the component model async feature"
+                    );
+                }
+            }
+            _ => {}
+        }
+
+        match name.kind() {
             // No validation necessary for these styles of names
             ComponentNameKind::Label(_)
+            | ComponentNameKind::AsyncLabel(_)
             | ComponentNameKind::Interface(_)
             | ComponentNameKind::Url(_)
             | ComponentNameKind::Dependency(_)
@@ -3898,10 +4063,10 @@ impl ComponentNameContext {
             // must be named within this context to match `rname`
             ComponentNameKind::Constructor(rname) => {
                 let ty = func()?;
-                if ty.results.len() != 1 {
-                    bail!(offset, "function should return one value");
-                }
-                let ty = ty.results[0].1;
+                let ty = match ty.result {
+                    Some(result) => result,
+                    None => bail!(offset, "function should return one value"),
+                };
                 let resource = match ty {
                     ComponentValType::Primitive(_) => None,
                     ComponentValType::Type(ty) => match &types[ty] {
@@ -3919,7 +4084,7 @@ impl ComponentNameContext {
             // Methods must take `(param "self" (borrow $resource))` as the
             // first argument where `$resources` matches the name `resource` as
             // named in this context.
-            ComponentNameKind::Method(name) => {
+            ComponentNameKind::Method(name) | ComponentNameKind::AsyncMethod(name) => {
                 let ty = func()?;
                 if ty.params.len() == 0 {
                     bail!(offset, "function should have at least one argument");
@@ -3951,7 +4116,7 @@ impl ComponentNameContext {
             // Static methods don't have much validation beyond that they must
             // be a function and the resource name referred to must already be
             // in this context.
-            ComponentNameKind::Static(name) => {
+            ComponentNameKind::Static(name) | ComponentNameKind::AsyncStatic(name) => {
                 func()?;
                 if !self.all_resource_names.contains(name.resource().as_str()) {
                     bail!(offset, "static resource name is not known in this context");

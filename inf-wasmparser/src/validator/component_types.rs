@@ -7,7 +7,8 @@ use crate::validator::types::{
     CoreTypeId, EntityType, SnapshotList, TypeAlloc, TypeData, TypeIdentifier, TypeInfo, TypeList,
     Types, TypesKind, TypesRef, TypesRefKind,
 };
-use crate::{BinaryReaderError, FuncType, PrimitiveValType, Result, ValType};
+use crate::{BinaryReaderError, CanonicalOption, FuncType, PrimitiveValType, Result, ValType};
+use core::fmt;
 use core::ops::Index;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use core::{
@@ -86,7 +87,14 @@ impl LoweredTypes {
     }
 }
 
+impl fmt::Debug for LoweredTypes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_slice().fmt(f)
+    }
+}
+
 /// Represents information about a component function type lowering.
+#[derive(Debug)]
 pub(crate) struct LoweringInfo {
     pub(crate) params: LoweredTypes,
     pub(crate) results: LoweredTypes,
@@ -123,7 +131,8 @@ fn push_primitive_wasm_types(ty: &PrimitiveValType, lowered_types: &mut LoweredT
         | PrimitiveValType::U16
         | PrimitiveValType::S32
         | PrimitiveValType::U32
-        | PrimitiveValType::Char => lowered_types.push(ValType::I32),
+        | PrimitiveValType::Char
+        | PrimitiveValType::ErrorContext => lowered_types.push(ValType::I32),
         PrimitiveValType::S64 | PrimitiveValType::U64 => lowered_types.push(ValType::I64),
         PrimitiveValType::F32 => lowered_types.push(ValType::F32),
         PrimitiveValType::F64 => lowered_types.push(ValType::F64),
@@ -879,8 +888,8 @@ pub struct ComponentFuncType {
     pub(crate) info: TypeInfo,
     /// The function parameters.
     pub params: Box<[(KebabString, ComponentValType)]>,
-    /// The function's results.
-    pub results: Box<[(Option<KebabString>, ComponentValType)]>,
+    /// The function's result.
+    pub result: Option<ComponentValType>,
 }
 
 impl TypeData for ComponentFuncType {
@@ -893,11 +902,41 @@ impl TypeData for ComponentFuncType {
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum Abi {
+    /// Use to generate the core wasm signature of a component model function
+    /// that is `canon lower`'d with the synchronous ABI option set.
     LowerSync,
+    /// Use to generate the core wasm signature of a component model function
+    /// that is `canon lower`'d with the asynchronous ABI option set.
     LowerAsync,
+    /// Use to generate the core wasm signature that when `canon lift`'d with
+    /// the synchronous ABI option set will generate a component model function
+    /// type.
     LiftSync,
+    /// Use to generate the core wasm signature that when `canon lift`'d with
+    /// the asynchronous + callback ABI options set will generate a component
+    /// model function type.
     LiftAsync,
+    /// Use to generate the core wasm signature that when `canon lift`'d with
+    /// the asynchronou ABI option set will generate a component
+    /// model function type.
     LiftAsyncStackful,
+}
+
+impl Abi {
+    pub(crate) fn for_lift(options: &[CanonicalOption]) -> Abi {
+        if options.contains(&CanonicalOption::Async) {
+            if options
+                .iter()
+                .any(|v| matches!(v, CanonicalOption::Callback(_)))
+            {
+                Abi::LiftAsync
+            } else {
+                Abi::LiftAsyncStackful
+            }
+        } else {
+            Abi::LiftSync
+        }
+    }
 }
 
 impl ComponentFuncType {
@@ -913,7 +952,10 @@ impl ComponentFuncType {
                 }
                 info.results.push(ValType::I32);
                 info.requires_memory = true;
-                info.requires_realloc = self.results.iter().any(|(_, ty)| ty.contains_ptr(types));
+                info.requires_realloc = self
+                    .result
+                    .map(|ty| ty.contains_ptr(types))
+                    .unwrap_or(false);
                 return info;
             }
             Abi::LowerSync => true,
@@ -956,7 +998,7 @@ impl ComponentFuncType {
         match abi {
             Abi::LowerAsync => unreachable!(),
             Abi::LowerSync | Abi::LiftSync => {
-                for (_, ty) in self.results.iter() {
+                if let Some(ty) = &self.result {
                     // Results of lowered functions that contains pointers must be
                     // allocated by the callee meaning that realloc is required.
                     // Results of lifted function are allocated by the guest which
@@ -976,7 +1018,6 @@ impl ComponentFuncType {
                             assert!(info.results.push(ValType::I32));
                         }
                         info.requires_memory = true;
-                        break;
                     }
                 }
             }
@@ -1063,8 +1104,6 @@ pub enum ComponentDefinedType {
     Future(Option<ComponentValType>),
     /// A stream type with the specified payload type.
     Stream(Option<ComponentValType>),
-    /// The error-context type.
-    ErrorContext,
 }
 
 impl TypeData for ComponentDefinedType {
@@ -1077,8 +1116,7 @@ impl TypeData for ComponentDefinedType {
             | Self::Enum(_)
             | Self::Own(_)
             | Self::Future(_)
-            | Self::Stream(_)
-            | Self::ErrorContext => TypeInfo::new(),
+            | Self::Stream(_) => TypeInfo::new(),
             Self::Borrow(_) => TypeInfo::borrow(),
             Self::Record(r) => r.info,
             Self::Variant(v) => v.info,
@@ -1111,8 +1149,7 @@ impl ComponentDefinedType {
             | Self::Own(_)
             | Self::Borrow(_)
             | Self::Future(_)
-            | Self::Stream(_)
-            | Self::ErrorContext => false,
+            | Self::Stream(_) => false,
             Self::Option(ty) => ty.contains_ptr(types),
             Self::Result { ok, err } => {
                 ok.map(|ty| ty.contains_ptr(types)).unwrap_or(false)
@@ -1141,12 +1178,9 @@ impl ComponentDefinedType {
             Self::Flags(names) => {
                 (0..(names.len() + 31) / 32).all(|_| lowered_types.push(ValType::I32))
             }
-            Self::Enum(_)
-            | Self::Own(_)
-            | Self::Borrow(_)
-            | Self::Future(_)
-            | Self::Stream(_)
-            | Self::ErrorContext => lowered_types.push(ValType::I32),
+            Self::Enum(_) | Self::Own(_) | Self::Borrow(_) | Self::Future(_) | Self::Stream(_) => {
+                lowered_types.push(ValType::I32)
+            }
             Self::Option(ty) => {
                 Self::push_variant_wasm_types([ty].into_iter(), types, lowered_types)
             }
@@ -1216,7 +1250,6 @@ impl ComponentDefinedType {
             ComponentDefinedType::Borrow(_) => "borrow",
             ComponentDefinedType::Future(_) => "future",
             ComponentDefinedType::Stream(_) => "stream",
-            ComponentDefinedType::ErrorContext => "error-context",
         }
     }
 }
@@ -1931,8 +1964,7 @@ impl TypeAlloc {
         match &self[id] {
             ComponentDefinedType::Primitive(_)
             | ComponentDefinedType::Flags(_)
-            | ComponentDefinedType::Enum(_)
-            | ComponentDefinedType::ErrorContext => {}
+            | ComponentDefinedType::Enum(_) => {}
             ComponentDefinedType::Record(r) => {
                 for ty in r.fields.values() {
                     self.free_variables_valtype(ty, set);
@@ -2024,12 +2056,7 @@ impl TypeAlloc {
         set: &mut IndexSet<ResourceId>,
     ) {
         let i = &self[id];
-        for ty in i
-            .params
-            .iter()
-            .map(|(_, ty)| ty)
-            .chain(i.results.iter().map(|(_, ty)| ty))
-        {
+        for ty in i.params.iter().map(|(_, ty)| ty).chain(&i.result) {
             self.free_variables_valtype(ty, set);
         }
     }
@@ -2074,7 +2101,7 @@ impl TypeAlloc {
         let ty = &self[id];
         match ty {
             // Primitives are always considered named
-            ComponentDefinedType::Primitive(_) | ComponentDefinedType::ErrorContext => true,
+            ComponentDefinedType::Primitive(_) => true,
 
             // These structures are never allowed to be anonymous, so they
             // themselves must be named.
@@ -2266,8 +2293,7 @@ where
         match &mut tmp {
             ComponentDefinedType::Primitive(_)
             | ComponentDefinedType::Flags(_)
-            | ComponentDefinedType::Enum(_)
-            | ComponentDefinedType::ErrorContext => {}
+            | ComponentDefinedType::Enum(_) => {}
             ComponentDefinedType::Record(r) => {
                 for ty in r.fields.values_mut() {
                     any_changed |= self.remap_valtype(ty, map);
@@ -2353,7 +2379,7 @@ where
             .params
             .iter_mut()
             .map(|(_, ty)| ty)
-            .chain(tmp.results.iter_mut().map(|(_, ty)| ty))
+            .chain(&mut tmp.result)
         {
             any_changed |= self.remap_valtype(ty, map);
         }
@@ -2710,14 +2736,6 @@ impl<'a> SubtypeCx<'a> {
                 a.params.len(),
             );
         }
-        if a.results.len() != b.results.len() {
-            bail!(
-                offset,
-                "expected {} results, found {}",
-                b.results.len(),
-                a.results.len(),
-            );
-        }
         for ((an, a), (bn, b)) in a.params.iter().zip(b.params.iter()) {
             if an != bn {
                 bail!(offset, "expected parameter named `{bn}`, found `{an}`");
@@ -2725,12 +2743,15 @@ impl<'a> SubtypeCx<'a> {
             self.component_val_type(a, b, offset)
                 .with_context(|| format!("type mismatch in function parameter `{an}`"))?;
         }
-        for ((an, a), (bn, b)) in a.results.iter().zip(b.results.iter()) {
-            if an != bn {
-                bail!(offset, "mismatched result names");
-            }
-            self.component_val_type(a, b, offset)
-                .with_context(|| "type mismatch with result type")?;
+
+        match (&a.result, &b.result) {
+            (Some(a), Some(b)) => self
+                .component_val_type(a, b, offset)
+                .with_context(|| "type mismatch with result type")?,
+            (None, None) => {}
+
+            (Some(_), None) => bail!(offset, "expected a result, found none"),
+            (None, Some(_)) => bail!(offset, "expected no result, found one"),
         }
         Ok(())
     }
@@ -3249,8 +3270,6 @@ impl<'a> SubtypeCx<'a> {
                 (Some(_), None) => bail!(offset, "expected stream type to not be present"),
             },
             (Stream(_), b) => bail!(offset, "expected {}, found stream", b.desc()),
-            (ErrorContext, ErrorContext) => Ok(()),
-            (ErrorContext, b) => bail!(offset, "expected {}, found error-context", b.desc()),
         }
     }
 
