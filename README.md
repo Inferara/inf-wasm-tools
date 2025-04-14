@@ -28,9 +28,9 @@ This project is licensed under the MIT license.
 
 Are welcome!
 
-### Packages
+### Crates
 
-| Package |
-| ------- | 
+| Crate |
+| ------- |
 | ![Crates.io Version](https://img.shields.io/crates/v/inf-wast?label=inf-wast) |
 | ![Crates.io Version](https://img.shields.io/crates/v/inf-wast?label=inf-wast) |

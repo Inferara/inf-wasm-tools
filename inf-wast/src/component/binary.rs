@@ -160,6 +160,7 @@ struct Encoder<'a> {
     core_type_names: Vec<Option<&'a str>>,
     core_module_names: Vec<Option<&'a str>>,
     core_instance_names: Vec<Option<&'a str>>,
+    core_tag_names: Vec<Option<&'a str>>,
     func_names: Vec<Option<&'a str>>,
     value_names: Vec<Option<&'a str>>,
     type_names: Vec<Option<&'a str>>,
@@ -353,9 +354,14 @@ impl<'a> Encoder<'a> {
                     self.core_func_names.push(name);
                     self.funcs.resource_rep(info.ty.into());
                 }
-                CoreFuncKind::ThreadSpawn(info) => {
+                CoreFuncKind::ThreadSpawnRef(info) => {
                     self.core_func_names.push(name);
-                    self.funcs.thread_spawn(info.ty.into());
+                    self.funcs.thread_spawn_ref(info.ty.into());
+                }
+                CoreFuncKind::ThreadSpawnIndirect(info) => {
+                    self.core_func_names.push(name);
+                    self.funcs
+                        .thread_spawn_indirect(info.ty.into(), info.table.idx.into());
                 }
                 CoreFuncKind::ThreadAvailableParallelism(_info) => {
                     self.core_func_names.push(name);
@@ -373,6 +379,14 @@ impl<'a> Encoder<'a> {
                             .map(|ty| wasm_encoder::ComponentValType::from(ty)),
                         info.opts.iter().map(Into::into),
                     );
+                }
+                CoreFuncKind::ContextGet(i) => {
+                    self.core_func_names.push(name);
+                    self.funcs.context_get(*i);
+                }
+                CoreFuncKind::ContextSet(i) => {
+                    self.core_func_names.push(name);
+                    self.funcs.context_set(*i);
                 }
                 CoreFuncKind::Yield(info) => {
                     self.core_func_names.push(name);
@@ -596,6 +610,7 @@ impl<'a> Encoder<'a> {
         funcs(&self.core_table_names, ComponentNameSection::core_tables);
         funcs(&self.core_memory_names, ComponentNameSection::core_memories);
         funcs(&self.core_global_names, ComponentNameSection::core_globals);
+        funcs(&self.core_tag_names, ComponentNameSection::core_tags);
         funcs(&self.core_type_names, ComponentNameSection::core_types);
         funcs(&self.core_module_names, ComponentNameSection::core_modules);
         funcs(
@@ -645,7 +660,7 @@ impl<'a> Encoder<'a> {
             core::ExportKind::Global => &mut self.core_global_names,
             core::ExportKind::Table => &mut self.core_table_names,
             core::ExportKind::Memory => &mut self.core_memory_names,
-            core::ExportKind::Tag => unimplemented!(),
+            core::ExportKind::Tag => &mut self.core_tag_names,
         }
     }
 

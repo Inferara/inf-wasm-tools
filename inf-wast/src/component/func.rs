@@ -51,10 +51,13 @@ pub enum CoreFuncKind<'a> {
     ResourceNew(CanonResourceNew<'a>),
     ResourceDrop(CanonResourceDrop<'a>),
     ResourceRep(CanonResourceRep<'a>),
-    ThreadSpawn(CanonThreadSpawn<'a>),
+    ThreadSpawnRef(CanonThreadSpawnRef<'a>),
+    ThreadSpawnIndirect(CanonThreadSpawnIndirect<'a>),
     ThreadAvailableParallelism(CanonThreadAvailableParallelism),
     BackpressureSet,
     TaskReturn(CanonTaskReturn<'a>),
+    ContextGet(u32),
+    ContextSet(u32),
     Yield(CanonYield),
     SubtaskDrop,
     StreamNew(CanonStreamNew<'a>),
@@ -107,8 +110,10 @@ impl<'a> CoreFuncKind<'a> {
             Ok(CoreFuncKind::ResourceDrop(parser.parse()?))
         } else if l.peek::<kw::resource_rep>()? {
             Ok(CoreFuncKind::ResourceRep(parser.parse()?))
-        } else if l.peek::<kw::thread_spawn>()? {
-            Ok(CoreFuncKind::ThreadSpawn(parser.parse()?))
+        } else if l.peek::<kw::thread_spawn_ref>()? {
+            Ok(CoreFuncKind::ThreadSpawnRef(parser.parse()?))
+        } else if l.peek::<kw::thread_spawn_indirect>()? {
+            Ok(CoreFuncKind::ThreadSpawnIndirect(parser.parse()?))
         } else if l.peek::<kw::thread_available_parallelism>()? {
             Ok(CoreFuncKind::ThreadAvailableParallelism(parser.parse()?))
         } else if l.peek::<kw::backpressure_set>()? {
@@ -116,6 +121,14 @@ impl<'a> CoreFuncKind<'a> {
             Ok(CoreFuncKind::BackpressureSet)
         } else if l.peek::<kw::task_return>()? {
             Ok(CoreFuncKind::TaskReturn(parser.parse()?))
+        } else if l.peek::<kw::context_get>()? {
+            parser.parse::<kw::context_get>()?;
+            parser.parse::<kw::i32>()?;
+            Ok(CoreFuncKind::ContextGet(parser.parse()?))
+        } else if l.peek::<kw::context_set>()? {
+            parser.parse::<kw::context_set>()?;
+            parser.parse::<kw::i32>()?;
+            Ok(CoreFuncKind::ContextSet(parser.parse()?))
         } else if l.peek::<kw::yield_>()? {
             Ok(CoreFuncKind::Yield(parser.parse()?))
         } else if l.peek::<kw::subtask_drop>()? {
@@ -461,20 +474,40 @@ impl<'a> Parse<'a> for CanonResourceRep<'a> {
     }
 }
 
-/// Information relating to the `thread.spawn` intrinsic.
+/// Information relating to the `thread.spawn_ref` intrinsic.
 #[derive(Debug)]
-pub struct CanonThreadSpawn<'a> {
+pub struct CanonThreadSpawnRef<'a> {
     /// The function type that is being spawned.
     pub ty: Index<'a>,
 }
 
-impl<'a> Parse<'a> for CanonThreadSpawn<'a> {
+impl<'a> Parse<'a> for CanonThreadSpawnRef<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
-        parser.parse::<kw::thread_spawn>()?;
+        parser.parse::<kw::thread_spawn_ref>()?;
 
         Ok(Self {
             ty: parser.parse()?,
         })
+    }
+}
+
+/// Information relating to the `thread.spawn_indirect` intrinsic.
+///
+/// This should look quite similar to parsing of `CallIndirect`.
+#[derive(Debug)]
+pub struct CanonThreadSpawnIndirect<'a> {
+    /// The function type that is being spawned.
+    pub ty: Index<'a>,
+    /// The table that this spawn is going to be indexing.
+    pub table: CoreItemRef<'a, kw::table>,
+}
+
+impl<'a> Parse<'a> for CanonThreadSpawnIndirect<'a> {
+    fn parse(parser: Parser<'a>) -> Result<Self> {
+        parser.parse::<kw::thread_spawn_indirect>()?;
+        let ty = parser.parse()?;
+        let table = parser.parens(|p| p.parse())?;
+        Ok(Self { ty, table })
     }
 }
 
@@ -530,10 +563,7 @@ impl<'a> Parse<'a> for CanonWaitableSetWait<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
         parser.parse::<kw::waitable_set_wait>()?;
         let async_ = parser.parse::<Option<kw::r#async>>()?.is_some();
-        let memory = parser.parens(|parser| {
-            let span = parser.parse::<kw::memory>()?.0;
-            parse_trailing_item_ref(kw::memory(span), parser)
-        })?;
+        let memory = parser.parens(|p| p.parse())?;
 
         Ok(Self { async_, memory })
     }
@@ -553,10 +583,7 @@ impl<'a> Parse<'a> for CanonWaitableSetPoll<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
         parser.parse::<kw::waitable_set_poll>()?;
         let async_ = parser.parse::<Option<kw::r#async>>()?.is_some();
-        let memory = parser.parens(|parser| {
-            let span = parser.parse::<kw::memory>()?.0;
-            parse_trailing_item_ref(kw::memory(span), parser)
-        })?;
+        let memory = parser.parens(|p| p.parse())?;
 
         Ok(Self { async_, memory })
     }
@@ -919,11 +946,7 @@ impl<'a> Parse<'a> for CanonOpt<'a> {
             parser.parens(|parser| {
                 let mut l = parser.lookahead1();
                 if l.peek::<kw::memory>()? {
-                    let span = parser.parse::<kw::memory>()?.0;
-                    Ok(CanonOpt::Memory(parse_trailing_item_ref(
-                        kw::memory(span),
-                        parser,
-                    )?))
+                    Ok(CanonOpt::Memory(parser.parse()?))
                 } else if l.peek::<kw::realloc>()? {
                     parser.parse::<kw::realloc>()?;
                     Ok(CanonOpt::Realloc(
@@ -969,14 +992,6 @@ impl Peek for CanonOpt<'_> {
     fn display() -> &'static str {
         "canonical option"
     }
-}
-
-fn parse_trailing_item_ref<T>(kind: T, parser: Parser) -> Result<CoreItemRef<T>> {
-    Ok(CoreItemRef {
-        kind,
-        idx: parser.parse()?,
-        export_name: parser.parse()?,
-    })
 }
 
 impl<'a> Parse<'a> for Vec<CanonOpt<'a>> {

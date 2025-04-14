@@ -22,19 +22,19 @@ More information about Inference can be found in the official [Inference languag
 
 ### Block instructions
 
-| Instruction | WAT syntax | Binary representation | Description |
-| --- | --- | --- | --- |
-| **Forall** | `(forall )` | `0xFC 0x3a` | TBD |
-| **Exists** | `(exists )` | `0xFC 0x3b` | TBD |
-| **Assume** | `(assume )` | `0xFC 0x3c` | TBD |
-| **Unique** | `(unique )` | `0xFC 0x3d` | TBD |
+| Instruction | WAT syntax  | Binary representation | Description |
+| ----------- | ----------- | --------------------- | ----------- |
+| **Forall**  | `(forall )` | `0xFC 0x3a`           | In this block all possible program execution paths are considered |
+| **Exists**  | `(exists )` | `0xFC 0x3b`           | In this block the existance of a certain program execution path is considered |
+| **Assume**  | `(assume )` | `0xFC 0x3c`           | In this block the assumption about the program state in defined |
+| **Unique**  | `(unique )` | `0xFC 0x3d`           | In this block it is assumed the existance of **only one** certain program execution path |
 
 ### Variable instructions
 
-| Instruction | WAT syntax | Binary representation | Description |
-| --- | --- | --- | --- |
-| **i32.uzumaki** | `(i32.uzumaki)` | `0xFC 0x31` | TBD |
-| **i64.uzumaki** | `(i64.uzumaki)` | `0xFC 0x32` | TBD |
+| Instruction     | WAT syntax      | Binary representation | Description |
+| --------------- | --------------- | --------------------- | ----------- |
+| **i32.uzumaki** | `(i32.uzumaki)` | `0xFC 0x31`           | `i32` value type attribute guiding [inference](https://github.com/Inferara/inference) compiler to generate a proof that reason about all possible values the variable can hold |
+| **i64.uzumaki** | `(i64.uzumaki)` | `0xFC 0x32`           | `i64` value type attribute guiding [inference](https://github.com/Inferara/inference) compiler to generate a proof that reason about all possible values the variable can hold |
 
 ## Origin
 

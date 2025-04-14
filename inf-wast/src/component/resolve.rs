@@ -387,8 +387,12 @@ impl<'a> Resolver<'a> {
                 CoreFuncKind::ResourceDrop(info) => {
                     self.resolve_ns(&mut info.ty, Ns::Type)?;
                 }
-                CoreFuncKind::ThreadSpawn(info) => {
+                CoreFuncKind::ThreadSpawnRef(info) => {
                     self.resolve_ns(&mut info.ty, Ns::CoreType)?;
+                }
+                CoreFuncKind::ThreadSpawnIndirect(info) => {
+                    self.resolve_ns(&mut info.ty, Ns::CoreType)?;
+                    self.core_item_ref(&mut info.table)?;
                 }
                 CoreFuncKind::ThreadAvailableParallelism(_)
                 | CoreFuncKind::BackpressureSet
@@ -401,6 +405,7 @@ impl<'a> Resolver<'a> {
                     }
                     self.canon_opts(&mut info.opts)?;
                 }
+                CoreFuncKind::ContextGet(_) | CoreFuncKind::ContextSet(_) => {}
                 CoreFuncKind::StreamNew(info) => {
                     self.resolve_ns(&mut info.ty, Ns::Type)?;
                 }
@@ -836,7 +841,21 @@ impl<'a> Resolver<'a> {
                 target: AliasTarget::Outer {
                     outer: Index::Num(depth, span),
                     index: Index::Num(found, span),
-                    kind: ns.into(),
+                    kind: match ns {
+                        Ns::CoreModule => ComponentOuterAliasKind::CoreModule,
+                        Ns::CoreType => ComponentOuterAliasKind::CoreType,
+                        Ns::Type => ComponentOuterAliasKind::Type,
+                        Ns::Component => ComponentOuterAliasKind::Component,
+                        _ => {
+                            return Err(Error::new(
+                                span,
+                                format!(
+                                    "outer item `{}` is not a module, type, or component",
+                                    id.name(),
+                                ),
+                            ))
+                        }
+                    },
                 },
             };
             let local_index = self.current().register_alias(&alias)?;
@@ -1093,6 +1112,7 @@ component_item!(kw::module, CoreModule);
 
 core_item!(kw::func, CoreFunc);
 core_item!(kw::memory, CoreMemory);
+core_item!(kw::table, CoreTable);
 core_item!(kw::r#type, CoreType);
 core_item!(kw::r#instance, CoreInstance);
 
@@ -1106,18 +1126,6 @@ impl From<Ns> for ComponentExportAliasKind {
             Ns::Component => Self::Component,
             Ns::Value => Self::Value,
             _ => unreachable!("not a component exportable namespace"),
-        }
-    }
-}
-
-impl From<Ns> for ComponentOuterAliasKind {
-    fn from(ns: Ns) -> Self {
-        match ns {
-            Ns::CoreModule => Self::CoreModule,
-            Ns::CoreType => Self::CoreType,
-            Ns::Type => Self::Type,
-            Ns::Component => Self::Component,
-            _ => unreachable!("not an outer alias namespace"),
         }
     }
 }
