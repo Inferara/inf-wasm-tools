@@ -17,3 +17,5 @@ jobs:
       run: cargo publish -p inf-wast
     - name: Publish inf-wasmparser
       run: cargo publish -p inf-wasmparser
+    - name: Publish wat-fmt
+      run: cargo publish -p wat-fmt

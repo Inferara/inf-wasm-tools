@@ -14,6 +14,13 @@
 
 More information about Inference can be found in the official [Inference language spec](https://github.com/Inferara/inference-language-spec) and on the [Inferara website](https://www.inferara.com).
 
+## Overview
+
+| Crate | Description |
+| ------- | ----------- |
+| [wat-fmt](./wat-fmt/) | A pretty formatter for WebAssembly Text Format. |
+| [inf-wast](./inf-wast/) | A WebAssembly Text Format (WAT) parser and printer. |
+| [inf-wasmparser](./inf-wasmparser/) | A WebAssembly binary format (WASM) parser. |
 
 # License
 
@@ -32,5 +39,6 @@ Are welcome!
 
 | Crate |
 | ------- |
+| ![Crates.io Version](https://img.shields.io/crates/v/wat-fmt?label=wat-fmt) |
 | ![Crates.io Version](https://img.shields.io/crates/v/inf-wast?label=inf-wast) |
 | ![Crates.io Version](https://img.shields.io/crates/v/inf-wast?label=inf-wast) |

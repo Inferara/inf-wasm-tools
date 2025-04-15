@@ -2,7 +2,7 @@
 
 resolver = "2"
 
-members = ["inf-wast", "inf-wasmparser"]
+members = ["inf-wast", "inf-wasmparser", "wat-fmt"]
 
 [workspace.package]
 version = "0.0.7"
@@ -14,7 +14,8 @@ repository = "https://github.com/Inferara/inf-wasm-tools"
 [workspace.dependencies]
 inf-wast = { path = "inf-wast" }
 inf-wasmparser = { path = "inf-wasmparser" }
-anyhow = "1.0.97"
+wat-fmt = { path = "wat-fmt" }
+anyhow = "1.0.98"
 leb128 = "0.2.5"
 wasm-encoder = "0.228.0"
 
