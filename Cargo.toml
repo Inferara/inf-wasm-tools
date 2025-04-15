@@ -5,7 +5,7 @@ resolver = "2"
 members = ["inf-wast", "inf-wasmparser", "wat-fmt"]
 
 [workspace.package]
-version = "0.0.7"
+version = "0.0.8"
 edition = "2021"
 license = "MIT"
 homepage = "https://inferara.com"
